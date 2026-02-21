@@ -29,6 +29,7 @@ interface LineItem {
   product_label: string;
   quantity: number;
   unit_price: number;
+  [key: string]: unknown;
 }
 
 export default function PlaceOrderPage() {
