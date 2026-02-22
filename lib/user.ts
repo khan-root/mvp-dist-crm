@@ -36,12 +36,12 @@ export interface CurrentUser {
 
 /**
  * Get current user from session. Use in server components instead of fetching /api/auth/me.
- * Returns null if not logged in or on DB error (graceful degradation).
+ * Returns null if not logged in or on any error (graceful degradation for Vercel/serverless).
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const session = await getSession();
-  if (!session) return null;
   try {
+    const session = await getSession();
+    if (!session) return null;
     await dbConnect();
     const user = await User.findById(session.userId)
       .select("-password_hash")
