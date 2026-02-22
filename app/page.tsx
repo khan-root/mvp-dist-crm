@@ -1,20 +1,13 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getServerApiBaseUrl } from "@/lib/api";
+import { getCurrentUser } from "@/lib/user";
 
 export default async function HomePage() {
-  const cookieStore = await cookies();
-  const res = await fetch(`${getServerApiBaseUrl()}/api/auth/me`, {
-    headers: { Cookie: cookieStore.toString() },
-    cache: "no-store",
-  });
-  const data = await res.json();
-  if (data.user) {
-    const t = data.user.user_type;
-    if (t === "agent") redirect("/agent");
-    if (t === "store") redirect("/store");
+  const user = await getCurrentUser();
+  if (user) {
+    if (user.user_type === "agent") redirect("/agent");
+    if (user.user_type === "store") redirect("/store");
     redirect("/dashboard");
   }
 

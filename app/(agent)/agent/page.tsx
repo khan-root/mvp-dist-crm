@@ -1,10 +1,9 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { dbConnect } from "@/lib/db";
 import { Agent, Store, Order } from "@/lib/models";
-import { getServerApiBaseUrl } from "@/lib/api";
+import { getCurrentUser } from "@/lib/user";
 import mongoose from "mongoose";
 
 async function getAgentData(agentId: string, tenantId: string) {
@@ -43,12 +42,7 @@ async function getAgentData(agentId: string, tenantId: string) {
 }
 
 export default async function AgentPortalPage() {
-  const cookieStore = await cookies();
-  const meRes = await fetch(`${getServerApiBaseUrl()}/api/auth/me`, {
-    headers: { Cookie: cookieStore.toString() },
-  });
-  const meData = await meRes.json();
-  const user = meData.user;
+  const user = await getCurrentUser();
   if (!user?.agent_id) {
     return (
       <div className="p-6">

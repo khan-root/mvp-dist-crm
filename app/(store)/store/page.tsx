@@ -1,11 +1,10 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { dbConnect } from "@/lib/db";
 import { Store, Order } from "@/lib/models";
-import { getServerApiBaseUrl } from "@/lib/api";
+import { getCurrentUser } from "@/lib/user";
 
 async function getStoreData(storeId: string, tenantId: string) {
   await dbConnect();
@@ -21,12 +20,7 @@ async function getStoreData(storeId: string, tenantId: string) {
 }
 
 export default async function StorePortalPage() {
-  const cookieStore = await cookies();
-  const meRes = await fetch(`${getServerApiBaseUrl()}/api/auth/me`, {
-    headers: { Cookie: cookieStore.toString() },
-  });
-  const meData = await meRes.json();
-  const user = meData.user;
+  const user = await getCurrentUser();
   if (!user?.store_id) {
     return (
       <div className="p-6">
