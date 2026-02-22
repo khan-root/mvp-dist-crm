@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { dbConnect } from "@/lib/db";
 import { Agent, Store, Order } from "@/lib/models";
+import { getServerApiBaseUrl } from "@/lib/api";
 import mongoose from "mongoose";
 
 async function getAgentData(agentId: string, tenantId: string) {
@@ -43,7 +44,7 @@ async function getAgentData(agentId: string, tenantId: string) {
 
 export default async function AgentPortalPage() {
   const cookieStore = await cookies();
-  const meRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/me`, {
+  const meRes = await fetch(`${getServerApiBaseUrl()}/api/auth/me`, {
     headers: { Cookie: cookieStore.toString() },
   });
   const meData = await meRes.json();

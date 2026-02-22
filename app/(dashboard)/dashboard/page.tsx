@@ -28,8 +28,9 @@ interface DashboardData {
 
 async function getDashboard() {
   const { cookies } = await import("next/headers");
+  const { getServerApiBaseUrl } = await import("@/lib/api");
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/dashboard`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/dashboard`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

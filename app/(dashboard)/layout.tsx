@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 interface MeResponse {
   user: { company_name?: string; user_type?: string } | null;
@@ -12,7 +13,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/me`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/auth/me`, {
     headers: { Cookie: cookieStore.toString() },
   });
   const data: MeResponse = await res.json();

@@ -5,10 +5,11 @@ import { CategoryForm } from "./category-form";
 import { BrandForm } from "./brand-form";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 async function getCategories() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/categories`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/categories`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });
@@ -18,7 +19,7 @@ async function getCategories() {
 
 async function getBrands() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/brands`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/brands`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });
@@ -28,7 +29,7 @@ async function getBrands() {
 
 async function getDistributors() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/distributors`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/distributors`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { TerritoryForm } from "./territory-form";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 async function getTerritories() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/territories`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/territories`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

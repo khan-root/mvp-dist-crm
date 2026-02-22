@@ -11,10 +11,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus } from "lucide-react";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 async function getDistributors() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/distributors`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/distributors`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

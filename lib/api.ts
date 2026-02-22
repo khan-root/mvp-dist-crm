@@ -1,5 +1,16 @@
 const API_BASE = "";
 
+/**
+ * Returns the base URL for server-side API fetch calls.
+ * Uses VERCEL_URL on Vercel (set automatically), otherwise NEXT_PUBLIC_APP_URL or localhost.
+ */
+export function getServerApiBaseUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+}
+
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,

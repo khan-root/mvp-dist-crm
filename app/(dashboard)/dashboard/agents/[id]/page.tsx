@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package, Store, Truck, ClipboardList } from "lucide-react";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 async function getAgent(id: string) {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/agents/${id}`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/agents/${id}`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

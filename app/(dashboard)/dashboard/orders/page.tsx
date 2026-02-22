@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CardDescription } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { OrdersTable } from "./orders-table";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 async function getOrders(searchParams: Record<string, string | undefined>) {
   const cookieStore = await cookies();
@@ -13,7 +14,7 @@ async function getOrders(searchParams: Record<string, string | undefined>) {
   if (searchParams.store_id) q.set("store_id", searchParams.store_id);
   if (searchParams.agent_id) q.set("agent_id", searchParams.agent_id);
   if (searchParams.delivery_status) q.set("delivery_status", searchParams.delivery_status);
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/orders?${q.toString()}`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/orders?${q.toString()}`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });
@@ -23,7 +24,7 @@ async function getOrders(searchParams: Record<string, string | undefined>) {
 
 async function getAgents() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/agents`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/agents`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });
@@ -34,7 +35,7 @@ async function getAgents() {
 
 async function getStores() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/stores`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/stores`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

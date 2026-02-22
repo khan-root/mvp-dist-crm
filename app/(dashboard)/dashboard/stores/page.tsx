@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
 import { AssignAgentDropdown } from "@/components/assign-agent-dropdown";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 async function getStores() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/stores`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/stores`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });
@@ -28,7 +29,7 @@ async function getStores() {
 
 async function getAgents() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/agents`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/agents`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });

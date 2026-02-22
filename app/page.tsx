@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getServerApiBaseUrl } from "@/lib/api";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/me`, {
+  const res = await fetch(`${getServerApiBaseUrl()}/api/auth/me`, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
   });
