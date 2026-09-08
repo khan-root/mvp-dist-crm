@@ -111,13 +111,13 @@ export default function RegisterPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
-        <CardFooter className="flex flex-col gap-2">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account…" : "Register"}
+        <CardFooter className="flex flex-col gap-4 mt-6 pt-5 border-t border-slate-200">
+          <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 shadow-sm mt-2" disabled={loading}>
+            {loading ? "Creating account…" : "Register Company Workspace"}
           </Button>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-sm text-slate-500 text-center">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary underline">
+            <Link href="/login" className="text-slate-900 font-semibold underline">
               Sign in
             </Link>
           </p>

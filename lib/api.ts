@@ -8,6 +8,10 @@ export function getServerApiBaseUrl(): string {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
+  if (process.env.NODE_ENV === "development") {
+    const port = process.env.PORT || "3000";
+    return `http://localhost:${port}`;
+  }
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }
 

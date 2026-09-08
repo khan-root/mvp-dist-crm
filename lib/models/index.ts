@@ -306,6 +306,9 @@ const agentSchema = new mongoose.Schema(
       },
     ],
     is_active: { type: Boolean, default: true },
+    assigned_product_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    assigned_route_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "SalesRoute" }],
+    assigned_store_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Store" }],
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   {
@@ -325,6 +328,7 @@ const storeSchema = new mongoose.Schema(
     distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Distributor" },
     territory_id: { type: mongoose.Schema.Types.ObjectId, ref: "Territory" },
     assigned_agent_id: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
+    assigned_route_id: { type: mongoose.Schema.Types.ObjectId, ref: "SalesRoute" },
     store_code: { type: String, required: true },
     store_name: { type: String, required: true },
     store_type: {
@@ -1537,6 +1541,43 @@ const apiKeySchema = new mongoose.Schema(
   baseSchemaOptions
 );
 
+const salesRouteSchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    territory_id: { type: mongoose.Schema.Types.ObjectId, ref: "Territory" },
+    distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Distributor" },
+    route_name: { type: String, required: true },
+    route_code: { type: String, required: true },
+    description: String,
+    start_point: {
+      name: String,
+      address: String,
+      latitude: { type: Number, required: true },
+      longitude: { type: Number, required: true },
+    },
+    end_point: {
+      name: String,
+      address: String,
+      latitude: { type: Number, required: true },
+      longitude: { type: Number, required: true },
+    },
+    waypoints: [
+      {
+        name: String,
+        latitude: { type: Number, required: true },
+        longitude: { type: Number, required: true },
+        order: Number,
+      },
+    ],
+    assigned_agent_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Agent" }],
+    assigned_store_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Store" }],
+    distance_km: { type: Number, default: 0 },
+    is_active: { type: Boolean, default: true },
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  { ...baseSchemaOptions, indexes: [{ tenant_id: 1, route_code: 1, unique: true }] }
+);
+
 // ==================== EXPORT ALL MODELS ====================
 export const Tenant = mongoose.models.Tenant ?? mongoose.model("Tenant", tenantSchema);
 export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
@@ -1545,6 +1586,7 @@ export const Territory = mongoose.models.Territory ?? mongoose.model("Territory"
 export const Distributor = mongoose.models.Distributor ?? mongoose.model("Distributor", distributorSchema);
 export const Agent = mongoose.models.Agent ?? mongoose.model("Agent", agentSchema);
 export const Store = mongoose.models.Store ?? mongoose.model("Store", storeSchema);
+export const SalesRoute = mongoose.models.SalesRoute ?? mongoose.model("SalesRoute", salesRouteSchema);
 export const Category = mongoose.models.Category ?? mongoose.model("Category", categorySchema);
 export const Brand = mongoose.models.Brand ?? mongoose.model("Brand", brandSchema);
 export const Product = mongoose.models.Product ?? mongoose.model("Product", productSchema);

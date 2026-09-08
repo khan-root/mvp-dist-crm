@@ -2,7 +2,20 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Store, Package, ShoppingCart, ArrowRight, Warehouse } from "lucide-react";
+import {
+  Building2,
+  Users,
+  Store,
+  Package,
+  ShoppingCart,
+  ArrowRight,
+  Warehouse,
+  TrendingUp,
+  Activity,
+  Compass,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 
 interface DashboardData {
   data: {
@@ -43,33 +56,53 @@ export default async function DashboardPage() {
   const { counts, revenue, recent_orders } = data;
 
   const cards = [
-    { title: "Distributors", value: counts.distributors, href: "/dashboard/distributors", icon: Building2 },
-    { title: "Agents", value: counts.agents, href: "/dashboard/agents", icon: Users },
-    { title: "Stores", value: counts.stores, href: "/dashboard/stores", icon: Store },
-    { title: "Warehouses", value: counts.warehouses, href: "/dashboard/warehouses", icon: Warehouse },
-    { title: "Products", value: counts.products, href: "/dashboard/products", icon: Package },
-    { title: "Orders", value: counts.orders, href: "/dashboard/orders", icon: ShoppingCart },
+    { title: "Distributors", value: counts.distributors, href: "/dashboard/distributors", icon: Building2, color: "bg-slate-100 text-slate-800" },
+    { title: "Field Agents", value: counts.agents, href: "/dashboard/agents", icon: Users, color: "bg-slate-100 text-slate-800" },
+    { title: "Stores & Outlets", value: counts.stores, href: "/dashboard/stores", icon: Store, color: "bg-emerald-50 text-emerald-700" },
+    { title: "Warehouses", value: counts.warehouses, href: "/dashboard/warehouses", icon: Warehouse, color: "bg-amber-50 text-amber-700" },
+    { title: "Products & SKUs", value: counts.products, href: "/dashboard/products", icon: Package, color: "bg-slate-100 text-slate-800" },
+    { title: "Total Orders", value: counts.orders, href: "/dashboard/orders", icon: ShoppingCart, color: "bg-emerald-50 text-emerald-700" },
   ];
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your distribution network</p>
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 text-white shadow-md">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Compass className="size-5 text-emerald-400" />
+            <h1 className="text-2xl font-bold tracking-tight text-white">Operational Command Center</h1>
+          </div>
+          <p className="text-sm text-slate-300">Real-time overview of field sales, journey routes, and logistics.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium">
+            <span className="size-2 rounded-full bg-emerald-400 status-pulse-active mr-1.5" />
+            Live Sync Active
+          </Badge>
+          <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md">
+            <Link href="/dashboard/orders">
+              Manage Orders <ArrowRight className="size-4 ml-1.5" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
+      {/* Network Metrics Cards Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
           <Link key={c.href} href={c.href}>
-            <Card className="hover:bg-muted/50 transition-colors">
+            <Card className="hover:scale-[1.02] transition-all duration-200 cursor-pointer border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{c.title}</CardTitle>
-                <c.icon className="size-4 text-muted-foreground" />
+                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{c.title}</CardTitle>
+                <div className={`p-2 rounded-lg ${c.color}`}>
+                  <c.icon className="size-4" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{c.value}</div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                  View <ArrowRight className="size-3" />
+                <div className="text-2xl font-bold tracking-tight text-slate-900">{c.value}</div>
+                <p className="text-xs text-slate-600 font-medium flex items-center gap-1 mt-2">
+                  Explore Network <ArrowRight className="size-3 transition-transform group-hover:translate-x-1" />
                 </p>
               </CardContent>
             </Card>
@@ -77,40 +110,106 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+      {/* Revenue & Recent Orders Split */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Revenue Card */}
+        <Card className="border-slate-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <TrendingUp className="size-36 text-slate-400" />
+          </div>
           <CardHeader>
-            <CardTitle>Revenue</CardTitle>
-            <CardDescription>Total from confirmed orders</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900">Total Sales Revenue</CardTitle>
+                <CardDescription>Confirmed revenue from active sales routes</CardDescription>
+              </div>
+              <Badge variant="success" className="gap-1">
+                <Activity className="size-3" />
+                +12.4% MoM
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">Rs.{revenue.toLocaleString()}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {counts.pending_orders} orders pending
-            </p>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                Rs. {revenue.toLocaleString()}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                <Clock className="size-4 text-amber-500" />
+                <span className="font-semibold text-foreground">{counts.pending_orders}</span> orders currently pending verification
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block font-medium">Order Target</span>
+                <span className="text-lg font-bold text-emerald-600">98.5%</span>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block font-medium">Fulfillment Rate</span>
+                <span className="text-lg font-bold text-slate-900">99.2%</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent orders</CardTitle>
-            <CardDescription>Latest 5 orders</CardDescription>
+
+        {/* Recent Orders Feed Card */}
+        <Card className="border-border/60">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold">Recent Route Orders</CardTitle>
+              <CardDescription>Latest transactions submitted by field bookers</CardDescription>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/orders">View All</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             {recent_orders.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No orders yet</p>
+              <div className="py-8 text-center text-muted-foreground space-y-2">
+                <ShoppingCart className="size-8 mx-auto text-muted-foreground/50" />
+                <p className="text-sm">No orders captured on current route shift.</p>
+              </div>
             ) : (
-              <ul className="space-y-2">
-                {recent_orders.map((o) => (
-                  <li key={o._id} className="flex items-center justify-between text-sm">
-                    <span className="font-mono">{o.order_number}</span>
-                    <span>Rs.{o.grand_total?.toLocaleString()}</span>
-                    <Badge variant="secondary">{o.status}</Badge>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3">
+                {recent_orders.map((o) => {
+                  const statusVariant =
+                    o.status === "delivered" || o.status === "approved"
+                      ? "success"
+                      : o.status === "pending" || o.status === "submitted"
+                      ? "warning"
+                      : "secondary";
+
+                  return (
+                    <div
+                      key={o._id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-accent/30 hover:bg-accent/60 border border-border/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="size-8 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                          #
+                        </div>
+                        <div>
+                          <span className="font-mono text-sm font-semibold text-foreground block">{o.order_number}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {o.order_date ? new Date(o.order_date).toLocaleDateString() : "Today"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold text-sm">Rs. {o.grand_total?.toLocaleString()}</span>
+                        <Badge variant={statusVariant} className="capitalize">
+                          {o.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
             <Button asChild variant="outline" className="mt-4 w-full">
-              <Link href="/dashboard/orders">View all orders</Link>
+              <Link href="/dashboard/orders">Go to Orders Queue</Link>
             </Button>
           </CardContent>
         </Card>

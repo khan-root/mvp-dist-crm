@@ -1,45 +1,57 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
 import { AssignAgentDropdown } from "@/components/assign-agent-dropdown";
-import { getServerApiBaseUrl } from "@/lib/api";
+import { dbConnect } from "@/lib/db";
+import { Store, Agent } from "@/lib/models";
+import { getCurrentUser } from "@/lib/user";
 
-async function getStores() {
-  const cookieStore = await cookies();
-  const res = await fetch(`${getServerApiBaseUrl()}/api/stores`, {
-    headers: { Cookie: cookieStore.toString() },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to load stores");
-  return res.json() as Promise<{
-    data: Array<{
-      _id: string;
-      store_code: string;
-      store_name: string;
-      store_type: string;
-      owner_info?: { name: string; phone: string };
-      address?: { city: string; state: string };
-      assigned_agent_id?: { _id: string; agent_code: string; first_name: string; last_name: string } | null;
-    }>;
-  }>;
-}
+async function getStoresData() {
+  await dbConnect();
+  const user = await getCurrentUser();
+  const tenantId = user?.tenant_id;
+  if (!tenantId) return { list: [], agents: [] };
 
-async function getAgents() {
-  const cookieStore = await cookies();
-  const res = await fetch(`${getServerApiBaseUrl()}/api/agents`, {
-    headers: { Cookie: cookieStore.toString() },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to load agents");
-  const j = await res.json();
-  return (j.data || []) as Array<{ _id: string; agent_code: string; first_name: string; last_name: string }>;
+  const [stores, agents] = await Promise.all([
+    Store.find({ tenant_id: tenantId, is_active: true })
+      .sort({ created_at: -1 })
+      .populate("assigned_agent_id", "agent_code first_name last_name personal_info")
+      .lean(),
+    Agent.find({ tenant_id: tenantId, is_active: true })
+      .sort({ first_name: 1 })
+      .lean(),
+  ]);
+
+  return {
+    list: (stores || []).map((s: any) => ({
+      _id: s._id.toString(),
+      store_code: s.store_code,
+      store_name: s.store_name,
+      store_type: s.store_type,
+      owner_info: s.owner_info,
+      address: s.address,
+      assigned_agent_id: s.assigned_agent_id
+        ? {
+            _id: s.assigned_agent_id._id.toString(),
+            agent_code: s.assigned_agent_id.agent_code,
+            first_name: s.assigned_agent_id.first_name,
+            last_name: s.assigned_agent_id.last_name,
+          }
+        : null,
+    })),
+    agents: (agents || []).map((a: any) => ({
+      _id: a._id.toString(),
+      agent_code: a.agent_code,
+      first_name: a.first_name,
+      last_name: a.last_name,
+    })),
+  };
 }
 
 export default async function StoresPage() {
-  const [{ data: list }, agents] = await Promise.all([getStores(), getAgents()]);
+  const { list, agents } = await getStoresData();
 
   return (
     <div className="space-y-6">

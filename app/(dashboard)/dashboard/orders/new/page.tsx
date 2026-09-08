@@ -273,7 +273,7 @@ export default function NewOrderPage() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
-          <CardFooter className="gap-2">
+          <CardFooter>
             <Button type="submit" disabled={loading || items.length === 0}>{loading ? "Creating…" : "Create order"}</Button>
             <Button type="button" variant="outline" asChild>
               <Link href="/dashboard/orders">Cancel</Link>

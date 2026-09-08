@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Store, ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Store as StoreIcon, ShoppingCart, MapPin, ArrowLeft, Phone, User as UserIcon } from "lucide-react";
+import { LogVisitDialog } from "@/components/log-visit-dialog";
 
 interface AssignedStore {
   _id: string;
@@ -30,54 +32,97 @@ export default function AgentShopsPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="space-y-6 max-w-5xl">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/agent">← Dashboard</Link>
+          <Link href="/agent">
+            <ArrowLeft className="size-4 mr-1.5" /> Back to Dashboard
+          </Link>
         </Button>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>My assigned shops</CardTitle>
-          <CardDescription>
-            Visit these shops, ask if they need products, and place orders on their behalf when they say yes.
-          </CardDescription>
+
+      <Card className="border-slate-200">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-bold text-slate-900">My Assigned Market Outlets & Shops</CardTitle>
+            <CardDescription>
+              Select any shopkeeper outlet to book an order on their behalf or log a market visit check-in.
+            </CardDescription>
+          </div>
+          <Button asChild size="sm" className="bg-slate-900 text-white hover:bg-slate-800 gap-1.5">
+            <Link href="/agent/place-order">
+              <ShoppingCart className="size-4" /> Quick Order
+            </Link>
+          </Button>
         </CardHeader>
+
         <CardContent>
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-slate-500 py-6 text-center">Loading assigned market outlets…</p>
           ) : stores.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No shops assigned yet. Ask your admin to assign shops to you.</p>
+            <div className="p-6 text-center space-y-2">
+              <p className="text-slate-700 font-semibold">No shops assigned yet.</p>
+              <p className="text-sm text-slate-500">Ask your manager to assign retail stores to your field agent account.</p>
+            </div>
           ) : (
-            <ul className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-2">
               {stores.map((s) => (
-                <li
+                <div
                   key={s._id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                  className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 shadow-2xs transition-all space-y-3"
                 >
-                  <div className="flex items-center gap-2">
-                    <Store className="size-4 text-muted-foreground" />
-                    <div>
-                      <span className="font-medium">{s.store_name}</span>
-                      <span className="text-muted-foreground ml-2">({s.store_code})</span>
-                      {s.store_type && (
-                        <span className="ml-2 text-sm text-muted-foreground">{s.store_type}</span>
-                      )}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
+                        <StoreIcon className="size-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-base">{s.store_name}</h3>
+                        <p className="text-xs text-slate-500 font-mono">Code: {s.store_code}</p>
+                      </div>
                     </div>
+                    {s.store_type && (
+                      <Badge variant="outline" className="capitalize text-xs bg-slate-50">
+                        {s.store_type}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {s.owner_info?.name} · {s.owner_info?.phone}
-                    {s.address && ` · ${[s.address.city, s.address.state].filter(Boolean).join(", ")}`}
+
+                  <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    <p className="flex items-center gap-1.5">
+                      <UserIcon className="size-3.5 text-slate-400" />
+                      <span className="font-medium text-slate-900">Owner:</span> {s.owner_info?.name || "Shopkeeper"}
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <Phone className="size-3.5 text-slate-400" />
+                      <span className="font-medium text-slate-900">Phone:</span> {s.owner_info?.phone || "N/A"}
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <MapPin className="size-3.5 text-slate-400" />
+                      <span className="font-medium text-slate-900">Location:</span> {[s.address?.city, s.address?.state].filter(Boolean).join(", ") || "Market Outlet"}
+                    </p>
                   </div>
-                  <Button size="sm" asChild>
-                    <Link href={`/agent/place-order?store_id=${s._id}`}>
-                      <ShoppingCart className="size-4" />
-                      Place order for this shop
-                    </Link>
-                  </Button>
-                </li>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                    <Button size="sm" className="flex-1 bg-slate-900 text-white hover:bg-slate-800 text-xs gap-1.5" asChild>
+                      <Link href={`/agent/place-order?store_id=${s._id}`}>
+                        <ShoppingCart className="size-3.5" /> Book Order for Shop
+                      </Link>
+                    </Button>
+
+                    <LogVisitDialog
+                      stores={stores}
+                      initialStoreId={s._id}
+                      trigger={
+                        <Button size="sm" variant="outline" className="text-xs gap-1">
+                          <MapPin className="size-3.5 text-emerald-600" /> Log Visit
+                        </Button>
+                      }
+                    />
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </CardContent>
       </Card>

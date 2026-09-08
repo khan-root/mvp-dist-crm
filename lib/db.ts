@@ -24,5 +24,17 @@ export async function dbConnect(): Promise<typeof mongoose> {
     cached.promise = mongoose.connect(MONGODB_URI, { bufferCommands: false });
   }
   cached.conn = await cached.promise;
+
+  // Drop stale name_1 unique index on users collection if it exists in MongoDB
+  try {
+    const usersColl = cached.conn.connection.collection("users");
+    const indexes = await usersColl.indexes();
+    if (indexes.some((idx) => idx.name === "name_1")) {
+      await usersColl.dropIndex("name_1");
+    }
+  } catch {
+    // Ignore error if index doesn't exist
+  }
+
   return cached.conn;
 }

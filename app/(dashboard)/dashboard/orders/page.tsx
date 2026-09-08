@@ -23,25 +23,33 @@ async function getOrders(searchParams: Record<string, string | undefined>) {
 }
 
 async function getAgents() {
-  const cookieStore = await cookies();
-  const res = await fetch(`${getServerApiBaseUrl()}/api/agents`, {
-    headers: { Cookie: cookieStore.toString() },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to load agents");
-  const j = await res.json();
-  return (j.data || []) as Array<{ _id: string; agent_code: string; first_name: string; last_name: string }>;
+  try {
+    const cookieStore = await cookies();
+    const res = await fetch(`${getServerApiBaseUrl()}/api/agents`, {
+      headers: { Cookie: cookieStore.toString() },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const j = await res.json();
+    return (j.data || []) as Array<{ _id: string; agent_code: string; first_name: string; last_name: string }>;
+  } catch {
+    return [];
+  }
 }
 
 async function getStores() {
-  const cookieStore = await cookies();
-  const res = await fetch(`${getServerApiBaseUrl()}/api/stores`, {
-    headers: { Cookie: cookieStore.toString() },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to load stores");
-  const j = await res.json();
-  return (j.data || []) as Array<{ _id: string; store_code: string; store_name: string }>;
+  try {
+    const cookieStore = await cookies();
+    const res = await fetch(`${getServerApiBaseUrl()}/api/stores`, {
+      headers: { Cookie: cookieStore.toString() },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const j = await res.json();
+    return (j.data || []) as Array<{ _id: string; store_code: string; store_name: string }>;
+  } catch {
+    return [];
+  }
 }
 
 export default async function OrdersPage({

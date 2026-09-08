@@ -125,8 +125,10 @@ export async function POST(request: Request) {
         });
       }
       const password_hash = await bcrypt.hash(parsed.data.password, 10);
+      const fullName = `${parsed.data.first_name} ${parsed.data.last_name}`.trim();
       await User.create({
         tenant_id: session.tenantId,
+        name: fullName,
         email: agentEmail,
         phone: parsed.data.personal_info.phone,
         password_hash,

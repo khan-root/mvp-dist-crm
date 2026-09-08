@@ -56,8 +56,10 @@ export async function POST(request: Request) {
       });
     }
 
+    const fullName = `${first_name} ${last_name}`.trim();
     const user = await User.create({
       tenant_id: tenant._id,
+      name: fullName,
       email,
       phone,
       password_hash,

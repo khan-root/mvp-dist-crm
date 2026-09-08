@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { dbConnect } from "@/lib/db";
 import { Territory } from "@/lib/models";
-import { requireSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 
 const CreateSchema = z.object({
   territory_name: z.string().min(1),
@@ -16,19 +16,21 @@ const CreateSchema = z.object({
 
 export async function GET() {
   try {
-    const session = await requireSession();
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await dbConnect();
     const list = await Territory.find({ tenant_id: session.tenantId, is_active: true }).sort({ territory_name: 1 }).lean();
     return NextResponse.json({ data: list });
-  } catch (e) {
-    if (e instanceof Response) throw e;
-    return NextResponse.json({ error: "Failed to list territories" }, { status: 500 });
+  } catch (e: any) {
+    console.error("Fetch territories error:", e);
+    return NextResponse.json({ error: e?.message || "Failed to list territories" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await requireSession();
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await request.json();
     const parsed = CreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -46,8 +48,8 @@ export async function POST(request: Request) {
       created_by: session.userId,
     });
     return NextResponse.json({ data: doc });
-  } catch (e) {
-    if (e instanceof Response) throw e;
-    return NextResponse.json({ error: "Failed to create territory" }, { status: 500 });
+  } catch (e: any) {
+    console.error("Create territory error:", e);
+    return NextResponse.json({ error: e?.message || "Failed to create territory" }, { status: 500 });
   }
 }

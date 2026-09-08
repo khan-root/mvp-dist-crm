@@ -19,7 +19,7 @@ export default function Error({
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-muted/30 p-4">
       <h1 className="text-2xl font-bold">Something went wrong</h1>
       <p className="text-muted-foreground text-center max-w-md">
-        A server error occurred. This often happens when environment variables (MONGODB_URI, JWT_SECRET) are not set in Vercel.
+        A server error occurred. Please check server logs and ensure your database connection and environment variables are properly configured.
       </p>
       <div className="flex gap-4">
         <Button onClick={reset}>Try again</Button>

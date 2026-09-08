@@ -102,7 +102,7 @@ export default function NewDistributorPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
-          <CardFooter className="gap-2">
+          <CardFooter>
             <Button type="submit" disabled={loading}>
               {loading ? "Creating…" : "Create"}
             </Button>

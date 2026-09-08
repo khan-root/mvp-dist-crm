@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { dbConnect } from "@/lib/db";
-import { Agent, Store, Order } from "@/lib/models";
-import { requireSession } from "@/lib/auth";
+import { Agent, Store, Order, SalesRoute } from "@/lib/models";
+import { getSession } from "@/lib/auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireSession();
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { id } = await params;
     await dbConnect();
 
@@ -22,7 +24,7 @@ export async function GET(
       .lean();
     if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
-    const [assignedStoresCount, ordersTotal, ordersDelivered, ordersPending, ordersInProgress] = await Promise.all([
+    const [assignedStoresCount, ordersTotal, ordersDelivered, ordersPending, ordersInProgress, assignedRoutes] = await Promise.all([
       Store.countDocuments({ tenant_id: session.tenantId, assigned_agent_id: id, is_active: true }),
       Order.countDocuments({ tenant_id: session.tenantId, agent_id: id }),
       Order.countDocuments({ tenant_id: session.tenantId, agent_id: id, status: "delivered" }),
@@ -37,6 +39,13 @@ export async function GET(
         status: { $in: ["processing", "shipped"] },
         delivery_status: { $in: ["processing", "shipped", "out_for_delivery"] },
       }),
+      SalesRoute.find({
+        tenant_id: session.tenantId,
+        assigned_agent_ids: id,
+        is_active: true,
+      })
+        .select("route_name route_code start_point end_point distance_km")
+        .lean(),
     ]);
 
     const productUnitsAssigned = await Order.aggregate([
@@ -46,9 +55,13 @@ export async function GET(
     ]);
     const totalUnitsAssigned = productUnitsAssigned[0]?.total ?? 0;
 
+    const assignedRouteIds = (assignedRoutes || []).map((r) => r._id.toString());
+
     return NextResponse.json({
       data: {
         ...agent,
+        assigned_route_ids: assignedRouteIds,
+        assigned_routes: assignedRoutes,
         stats: {
           assigned_stores: assignedStoresCount,
           orders_total: ordersTotal,
@@ -61,8 +74,8 @@ export async function GET(
         },
       },
     });
-  } catch (e) {
-    if (e instanceof Response) throw e;
-    return NextResponse.json({ error: "Failed to load agent" }, { status: 500 });
+  } catch (e: any) {
+    console.error("Fetch agent error:", e);
+    return NextResponse.json({ error: e?.message || "Failed to load agent" }, { status: 500 });
   }
 }
