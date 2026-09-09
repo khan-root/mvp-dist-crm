@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { dbConnect } from "@/lib/db";
 import { Store, Agent, Territory } from "@/lib/models";
 import { getCurrentUser } from "@/lib/user";

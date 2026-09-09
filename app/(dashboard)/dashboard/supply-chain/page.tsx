@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { dbConnect } from "@/lib/db";
 import { Product, Warehouse, PortShipment, RepackagingOrder, StockMovement, User, TransportBilty, DeliveryVehicle } from "@/lib/models";
 import { getSession } from "@/lib/auth";

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { Compass, Plus, Navigation } from "lucide-react";

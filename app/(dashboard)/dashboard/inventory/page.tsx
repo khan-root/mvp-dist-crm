@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { getServerApiBaseUrl } from "@/lib/api";
 import { InventoryClientView } from "./inventory-client-view";

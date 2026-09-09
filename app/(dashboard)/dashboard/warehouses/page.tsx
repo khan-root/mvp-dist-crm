@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import connectDB from "@/lib/db";
 import { Warehouse, Distributor, Product } from "@/lib/models";
 import { WarehousesClientView } from "./warehouses-client-view";

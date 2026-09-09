@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import connectDB from "@/lib/db";
 import { Agent, AttendanceRecord, AttendancePolicy, Payroll, AgentTeam } from "@/lib/models";
 import HRClientView from "./hr-client-view";

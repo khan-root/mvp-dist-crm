@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { getServerApiBaseUrl } from "@/lib/api";
 import { TelematicsClientView } from "./telematics-client-view";

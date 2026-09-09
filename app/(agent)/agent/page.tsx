@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { dbConnect } from "@/lib/db";
 import { Agent, Store, Order, SalesRoute } from "@/lib/models";
 import { getCurrentUser } from "@/lib/user";

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { AgentsClientView } from "./agents-client-view";
 import { getServerApiBaseUrl } from "@/lib/api";
