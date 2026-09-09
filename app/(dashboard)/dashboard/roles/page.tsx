@@ -1,26 +1,30 @@
-import { cookies } from "next/headers";
-import { getServerApiBaseUrl } from "@/lib/api";
+import { dbConnect } from "@/lib/db";
+import { Role, User, Warehouse } from "@/lib/models";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { RolesClientView } from "./roles-client-view";
 
-async function getRolesAndUsers() {
-  const cookieStore = await cookies();
-  const headers = { Cookie: cookieStore.toString() };
+export default async function RolesPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
 
-  const [rolesRes, usersRes] = await Promise.all([
-    fetch(`${getServerApiBaseUrl()}/api/roles`, { headers, cache: "no-store" }),
-    fetch(`${getServerApiBaseUrl()}/api/users`, { headers, cache: "no-store" }),
+  await dbConnect();
+
+  const [roles, users, warehouses] = await Promise.all([
+    Role.find({ tenant_id: session.tenantId }).lean(),
+    User.find({ tenant_id: session.tenantId })
+      .populate("role_id", "name code permissions")
+      .populate("assigned_warehouse_id", "warehouse_name warehouse_code")
+      .sort({ created_at: -1 })
+      .lean(),
+    Warehouse.find({ tenant_id: session.tenantId, is_active: true }).select("warehouse_name warehouse_code address").lean(),
   ]);
 
-  const rolesData = rolesRes.ok ? await rolesRes.json() : { data: [] };
-  const usersData = usersRes.ok ? await usersRes.json() : { data: [] };
-
-  return {
-    roles: rolesData.data || [],
-    users: usersData.data || [],
-  };
-}
-
-export default async function RolesPage() {
-  const { roles, users } = await getRolesAndUsers();
-  return <RolesClientView initialRoles={roles} initialUsers={users} />;
+  return (
+    <RolesClientView
+      initialRoles={JSON.parse(JSON.stringify(roles))}
+      initialUsers={JSON.parse(JSON.stringify(users))}
+      initialWarehouses={JSON.parse(JSON.stringify(warehouses))}
+    />
+  );
 }

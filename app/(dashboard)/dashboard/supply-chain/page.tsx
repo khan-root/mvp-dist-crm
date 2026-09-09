@@ -1,12 +1,12 @@
 import { dbConnect } from "@/lib/db";
-import { Product, Warehouse, PortShipment, RepackagingOrder, StockMovement, User } from "@/lib/models";
+import { Product, Warehouse, PortShipment, RepackagingOrder, StockMovement, User, TransportBilty, DeliveryVehicle } from "@/lib/models";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { SupplyChainClientView } from "./supply-chain-client-view";
+import { SupplyChainOverviewClient } from "./supply-chain-overview-client";
 
 export const metadata = {
-  title: "Supply Chain & Repackaging Hub | RoutePro CRM",
-  description: "Port Inbound Shipments, Bulk-to-Packet Repackaging, Multi-Warehouse Distribution & Outbound Market Sales",
+  title: "Supply Chain & Logistics Studio | RoutePro CRM",
+  description: "Executive Logistics Analytics, Inbound Shipments, Transport Bilties, Fleet Vehicles, Repackaging & Audit Ledgers",
 };
 
 export default async function SupplyChainPage() {
@@ -15,7 +15,7 @@ export default async function SupplyChainPage() {
 
   await dbConnect();
 
-  const [products, warehouses, portShipments, repackagingOrders, stockMovements, users] = await Promise.all([
+  const [products, warehouses, portShipments, repackagingOrders, stockMovements, users, transportBilties, vehicles, currentUser] = await Promise.all([
     Product.find({ tenant_id: session.tenantId }).select("product_name sku unit_of_measure category_id brand_id pricing").lean(),
     Warehouse.find({ tenant_id: session.tenantId, is_active: true }).select("warehouse_name warehouse_code address").lean(),
     PortShipment.find({ tenant_id: session.tenantId })
@@ -35,20 +35,36 @@ export default async function SupplyChainPage() {
       .populate("from_warehouse", "warehouse_name warehouse_code")
       .populate("to_warehouse", "warehouse_name warehouse_code")
       .populate("product_id", "product_name sku unit_of_measure")
+      .populate({ path: "bilty_id", select: "bilty_number transporter_name remaining_quantity initial_quantity", strictPopulate: false })
       .populate("created_by", "name email")
       .sort({ created_at: -1 })
       .lean(),
-    User.find({ tenant_id: session.tenantId }).select("name email role_id assigned_facility").populate("role_id", "name code").lean(),
+    User.find({ tenant_id: session.tenantId }).select("name email role_id assigned_facility assigned_warehouse_id").populate("role_id", "name code").populate("assigned_warehouse_id", "warehouse_name warehouse_code").lean(),
+    TransportBilty.find({ tenant_id: session.tenantId })
+      .populate("warehouse_id", "warehouse_name warehouse_code")
+      .populate("product_id", "product_name sku unit_of_measure")
+      .populate("port_shipment_id", "shipment_number vessel_name origin_country")
+      .populate("created_by", "name email")
+      .sort({ created_at: -1 })
+      .lean(),
+    DeliveryVehicle.find({ tenant_id: session.tenantId, is_active: true })
+      .populate("warehouse_id", "warehouse_name warehouse_code")
+      .sort({ created_at: -1 })
+      .lean(),
+    User.findById(session.userId).populate("role_id", "name code").populate("assigned_warehouse_id", "warehouse_name warehouse_code").lean(),
   ]);
 
   return (
-    <SupplyChainClientView
+    <SupplyChainOverviewClient
       initialProducts={JSON.parse(JSON.stringify(products))}
       initialWarehouses={JSON.parse(JSON.stringify(warehouses))}
       initialPortShipments={JSON.parse(JSON.stringify(portShipments))}
       initialRepackagingOrders={JSON.parse(JSON.stringify(repackagingOrders))}
       initialStockMovements={JSON.parse(JSON.stringify(stockMovements))}
-      initialUsers={JSON.parse(JSON.stringify(users))}
+      initialTransportBilties={JSON.parse(JSON.stringify(transportBilties))}
+      initialVehicles={JSON.parse(JSON.stringify(vehicles))}
+      currentUser={JSON.parse(JSON.stringify(currentUser))}
     />
   );
 }
+

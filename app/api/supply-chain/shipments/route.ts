@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { dbConnect } from "@/lib/db";
-import { PortShipment, Inventory, StockMovement } from "@/lib/models";
+import { PortShipment, Inventory, StockMovement, TransportBilty } from "@/lib/models";
 import { requireSession } from "@/lib/auth";
+
+const BiltyInputSchema = z.object({
+  bilty_number: z.string().min(1),
+  transporter_name: z.string().optional(),
+  vehicle_number: z.string().optional(),
+  driver_name: z.string().optional(),
+  quantity: z.number().positive(),
+});
 
 const CreateShipmentSchema = z.object({
   vessel_name: z.string().min(1),
@@ -13,6 +21,7 @@ const CreateShipmentSchema = z.object({
   quantity_received: z.number().positive(),
   unit_of_measure: z.string().default("Tons"),
   received_by_name: z.string().optional(),
+  bilties: z.array(BiltyInputSchema).optional(),
 });
 
 export async function GET() {
@@ -55,6 +64,7 @@ export async function POST(request: Request) {
       quantity_received,
       unit_of_measure,
       received_by_name,
+      bilties,
     } = parsed.data;
 
     // Upsert Inventory at port/warehouse
@@ -115,7 +125,38 @@ export async function POST(request: Request) {
       created_by: session.userId,
     });
 
-    return NextResponse.json({ data: newShipment });
+    // Create Transport Bilty records
+    const biltyItems = bilties && bilties.length > 0 ? bilties : [
+      {
+        bilty_number: `BL-${Date.now().toString().slice(-6)}`,
+        transporter_name: "Standard Transport",
+        vehicle_number: "T-01",
+        quantity: quantity_received,
+      }
+    ];
+
+    const createdBilties = [];
+    for (const b of biltyItems) {
+      const biltyDoc = await TransportBilty.create({
+        tenant_id: session.tenantId,
+        bilty_number: b.bilty_number,
+        port_shipment_id: newShipment._id,
+        warehouse_id,
+        product_id,
+        transporter_name: b.transporter_name || "Standard Transport",
+        vehicle_number: b.vehicle_number || "",
+        driver_name: b.driver_name || "",
+        initial_quantity: b.quantity,
+        dispatched_quantity: 0,
+        remaining_quantity: b.quantity,
+        unit_of_measure,
+        status: "active",
+        created_by: session.userId,
+      });
+      createdBilties.push(biltyDoc);
+    }
+
+    return NextResponse.json({ data: { shipment: newShipment, bilties: createdBilties } });
   } catch (e: any) {
     console.error("Port Shipment API Error:", e);
     if (e instanceof Response) throw e;

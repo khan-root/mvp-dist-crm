@@ -245,7 +245,7 @@ export function CatalogClientView({
                       <TableHead className="font-semibold">Domain</TableHead>
                       <TableHead className="font-semibold">GST / Margin</TableHead>
                       <TableHead className="text-right font-semibold">Actions</TableHead>
-                    </tr>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedCategories.map((c) => (
@@ -340,7 +340,7 @@ export function CatalogClientView({
                       <TableHead className="font-semibold">Domain</TableHead>
                       <TableHead className="font-semibold">Origin</TableHead>
                       <TableHead className="text-right font-semibold">Actions</TableHead>
-                    </tr>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedBrands.map((b) => (

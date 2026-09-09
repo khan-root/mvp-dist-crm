@@ -754,6 +754,8 @@ const stockMovementSchema = new mongoose.Schema(
     },
     reason: String,
     notes: String,
+    bilty_id: { type: mongoose.Schema.Types.ObjectId, ref: "TransportBilty" },
+    bilty_number: String,
     created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     movement_date: { type: Date, default: Date.now },
   },
@@ -1275,12 +1277,14 @@ const analyticsSchema = new mongoose.Schema(
 const deliveryVehicleSchema = new mongoose.Schema(
   {
     tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
-    distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Distributor", required: true },
-    vehicle_number: { type: String, required: true, unique: true },
+    distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Distributor" },
+    warehouse_id: { type: mongoose.Schema.Types.ObjectId, ref: "Warehouse" },
+    transporter_company: { type: String, default: "In-House Fleet" },
+    vehicle_number: { type: String, required: true },
     vehicle_type: {
       type: String,
-      enum: ["truck", "van", "tempo", "motorcycle", "bicycle"],
-      required: true,
+      enum: ["truck", "trailer", "container", "tanker", "van", "tempo", "motorcycle", "bicycle"],
+      default: "truck",
     },
     driver: {
       name: { type: String, required: true },
@@ -1288,8 +1292,9 @@ const deliveryVehicleSchema = new mongoose.Schema(
       license_number: String,
       alternate_phone: String,
     },
+    capacity_tons: { type: Number, default: 20 },
     capacity: {
-      weight_kg: { type: Number, required: true },
+      weight_kg: { type: Number, default: 20000 },
       volume_cubic_m: Number,
       max_packages: Number,
     },
@@ -1298,7 +1303,7 @@ const deliveryVehicleSchema = new mongoose.Schema(
       registration: { number: String, expiry_date: Date, document_url: String },
       permit: { number: String, valid_upto: Date, document_url: String },
     },
-    status: { type: String, enum: ["active", "inactive", "maintenance"], default: "active" },
+    status: { type: String, enum: ["active", "in_transit", "inactive", "maintenance"], default: "active" },
     last_maintenance: Date,
     next_maintenance: Date,
     current_location: {
@@ -1826,6 +1831,28 @@ const portShipmentSchema = new mongoose.Schema(
   { ...baseSchemaOptions, indexes: [{ tenant_id: 1, shipment_number: 1, unique: true }] }
 );
 
+// ==================== TRANSPORT BILTY ====================
+const transportBiltySchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    bilty_number: { type: String, required: true },
+    port_shipment_id: { type: mongoose.Schema.Types.ObjectId, ref: "PortShipment" },
+    warehouse_id: { type: mongoose.Schema.Types.ObjectId, ref: "Warehouse", required: true },
+    product_id: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    transporter_name: { type: String, default: "Standard Logistics" },
+    vehicle_number: { type: String },
+    driver_name: { type: String },
+    driver_phone: { type: String },
+    initial_quantity: { type: Number, required: true, min: 0 },
+    dispatched_quantity: { type: Number, default: 0, min: 0 },
+    remaining_quantity: { type: Number, required: true, min: 0 },
+    unit_of_measure: { type: String, default: "Tons" },
+    status: { type: String, enum: ["active", "exhausted"], default: "active" },
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { ...baseSchemaOptions, indexes: [{ tenant_id: 1, bilty_number: 1 }] }
+);
+
 // ==================== EXPORT ALL MODELS ====================
 export const Tenant = mongoose.models.Tenant ?? mongoose.model("Tenant", tenantSchema);
 export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
@@ -1847,9 +1874,13 @@ export const ProductVariant = mongoose.models.ProductVariant ?? mongoose.model("
 export const Warehouse = mongoose.models.Warehouse ?? mongoose.model("Warehouse", warehouseSchema);
 export const Batch = mongoose.models.Batch ?? mongoose.model("Batch", batchSchema);
 export const Inventory = mongoose.models.Inventory ?? mongoose.model("Inventory", inventorySchema);
+if (process.env.NODE_ENV === "development" && mongoose.models.StockMovement && !(mongoose.models.StockMovement.schema as any).path("bilty_id")) {
+  delete mongoose.models.StockMovement;
+}
 export const StockMovement = mongoose.models.StockMovement ?? mongoose.model("StockMovement", stockMovementSchema);
 export const RepackagingOrder = mongoose.models.RepackagingOrder ?? mongoose.model("RepackagingOrder", repackagingOrderSchema);
 export const PortShipment = mongoose.models.PortShipment ?? mongoose.model("PortShipment", portShipmentSchema);
+export const TransportBilty = mongoose.models.TransportBilty ?? mongoose.model("TransportBilty", transportBiltySchema);
 export const PriceList = mongoose.models.PriceList ?? mongoose.model("PriceList", priceListSchema);
 export const PriceListItem = mongoose.models.PriceListItem ?? mongoose.model("PriceListItem", priceListItemSchema);
 export const PricingRule = mongoose.models.PricingRule ?? mongoose.model("PricingRule", pricingRuleSchema);
@@ -1862,6 +1893,9 @@ export const Promotion = mongoose.models.Promotion ?? mongoose.model("Promotion"
 export const LoyaltyPoints = mongoose.models.LoyaltyPoints ?? mongoose.model("LoyaltyPoints", loyaltyPointsSchema);
 export const Notification = mongoose.models.Notification ?? mongoose.model("Notification", notificationSchema);
 export const Analytics = mongoose.models.Analytics ?? mongoose.model("Analytics", analyticsSchema);
+if (process.env.NODE_ENV === "development" && mongoose.models.DeliveryVehicle && !(mongoose.models.DeliveryVehicle.schema as any).path("capacity_tons")) {
+  delete mongoose.models.DeliveryVehicle;
+}
 export const DeliveryVehicle = mongoose.models.DeliveryVehicle ?? mongoose.model("DeliveryVehicle", deliveryVehicleSchema);
 export const DeliveryRoute = mongoose.models.DeliveryRoute ?? mongoose.model("DeliveryRoute", deliveryRouteSchema);
 export const Delivery = mongoose.models.Delivery ?? mongoose.model("Delivery", deliverySchema);

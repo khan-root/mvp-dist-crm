@@ -28,6 +28,9 @@ import {
   Radio,
   Clock,
   Ship,
+  FileSpreadsheet,
+  Truck,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,6 +45,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarInset,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +107,18 @@ const rawNavGroups: NavGroup[] = [
         subItems: [
           { title: "Inventory & Stock Levels", href: "/dashboard/inventory", icon: Boxes, module: "inventory" },
           { title: "Warehouse Hubs", href: "/dashboard/warehouses", icon: WarehouseIcon, module: "inventory" },
-          { title: "Supply Chain & Repackaging", href: "/dashboard/supply-chain", icon: Ship, module: "inventory" },
+        ],
+      },
+      {
+        title: "Supply Chain & Logistics",
+        icon: Ship,
+        subItems: [
+          { title: "Supply Chain Studio", href: "/dashboard/supply-chain", icon: Ship, module: "inventory" },
+          { title: "Transport Bilties", href: "/dashboard/supply-chain/bilties", icon: FileSpreadsheet, module: "inventory" },
+          { title: "Fleet & Transport Vehicles", href: "/dashboard/supply-chain/vehicles", icon: Truck, module: "inventory" },
+          { title: "Inbound Cargo Shipments", href: "/dashboard/supply-chain/shipments", icon: Boxes, module: "inventory" },
+          { title: "Packet Repackaging", href: "/dashboard/supply-chain/repackaging", icon: Boxes, module: "inventory" },
+          { title: "Movement Audit Trail", href: "/dashboard/supply-chain/audit", icon: History, module: "inventory" },
         ],
       },
     ],
@@ -206,7 +221,7 @@ export function DashboardSidebar({
           setCurrentUser(data.user);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   function toggleSubmenu(title: string) {
@@ -291,11 +306,10 @@ export function DashboardSidebar({
                           <button
                             type="button"
                             onClick={() => toggleSubmenu(item.title)}
-                            className={`w-full flex items-center justify-between h-9 rounded-lg px-3 text-sm cursor-pointer transition-all duration-200 ${
-                              isAnySubActive
-                                ? "bg-slate-100 text-slate-900 font-semibold border-l-2 border-emerald-500"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                            }`}
+                            className={`w-full flex items-center justify-between h-9 rounded-lg px-3 text-sm cursor-pointer transition-all duration-200 ${isAnySubActive
+                              ? "bg-slate-100 text-slate-900 font-semibold border-l-2 border-emerald-500"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                              }`}
                           >
                             <div className="flex items-center gap-3">
                               <item.icon className={`size-4 ${isAnySubActive ? "text-emerald-600" : "text-slate-500"}`} />
@@ -313,11 +327,10 @@ export function DashboardSidebar({
                                     <SidebarMenuButton
                                       asChild
                                       isActive={isSubActive}
-                                      className={`w-full h-8 rounded-md px-2.5 text-xs transition-all cursor-pointer ${
-                                        isSubActive
-                                          ? "bg-slate-900 text-white font-semibold shadow-2xs"
-                                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                                      }`}
+                                      className={`w-full h-8 rounded-md px-2.5 text-xs transition-all cursor-pointer ${isSubActive
+                                        ? "bg-slate-900 text-white font-semibold shadow-2xs"
+                                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                                        }`}
                                     >
                                       <Link href={sub.href} className="flex items-center gap-2">
                                         <sub.icon className={`size-3.5 ${isSubActive ? "text-emerald-400" : "text-slate-400"}`} />
@@ -338,11 +351,10 @@ export function DashboardSidebar({
                         <SidebarMenuButton
                           asChild
                           isActive={isActive}
-                          className={`w-full h-9 rounded-lg px-3 transition-all duration-200 cursor-pointer ${
-                            isActive
-                              ? "bg-slate-900 text-white font-semibold shadow-xs border-l-4 border-emerald-500"
-                              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                          }`}
+                          className={`w-full h-9 rounded-lg px-3 transition-all duration-200 cursor-pointer ${isActive
+                            ? "bg-slate-900 text-white font-semibold shadow-xs border-l-4 border-emerald-500"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                            }`}
                         >
                           <Link href={item.href!} className="flex items-center gap-3">
                             <item.icon className={`size-4 ${isActive ? "text-emerald-400" : "text-slate-500"}`} />
@@ -393,7 +405,36 @@ export function DashboardSidebar({
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="bg-background">{children}</SidebarInset>
+      <SidebarInset className="bg-background flex flex-col min-w-0 flex-1 overflow-x-hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="h-9 w-9 border bg-muted/40 hover:bg-accent cursor-pointer text-foreground" />
+            <div className="h-4 w-px bg-border hidden sm:block" />
+            <div className="flex items-center gap-2 truncate">
+              <span className="font-bold text-sm text-foreground truncate max-w-[150px] sm:max-w-xs">
+                {companyName}
+              </span>
+              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                Enterprise Cloud
+              </Badge>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {currentUser && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full border">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="font-medium text-foreground truncate max-w-[100px] sm:max-w-none">{currentUser.name}</span>
+                <span className="hidden md:inline text-muted-foreground">({currentUser.role_name || "Admin"})</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <main className="flex-1 p-3 sm:p-6 min-w-0 max-w-full overflow-x-hidden">
+          {children}
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
