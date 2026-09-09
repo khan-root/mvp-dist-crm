@@ -15,8 +15,8 @@ export function AgentPortalNav({ companyName }: { companyName: string }) {
   }
 
   return (
-    <header className="border-b border-border/40 glass-card sticky top-0 z-40">
-      <div className="flex h-14 items-center px-4 gap-4 justify-between">
+    <header className="border-b border-border/40 glass-card bg-white/80 backdrop-blur-md sticky top-0 z-40">
+      <div className="w-full max-w-7xl mx-auto flex h-16 items-center px-4 sm:px-6 lg:px-8 gap-4 justify-between">
         <div className="flex items-center gap-3">
           <div className="size-8 rounded-lg bg-slate-900 flex items-center justify-center text-emerald-400 shadow-md">
             <Compass className="size-4" />

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Store as StoreIcon, ShoppingCart, MapPin, ArrowLeft, Phone, User as UserIcon } from "lucide-react";
+import { Store as StoreIcon, ShoppingCart, MapPin, ArrowLeft, Phone, User as UserIcon, Plus } from "lucide-react";
 import { LogVisitDialog } from "@/components/log-visit-dialog";
 
 interface AssignedStore {
@@ -32,7 +32,7 @@ export default function AgentShopsPage() {
   }, []);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 w-full">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/agent">
@@ -42,27 +42,46 @@ export default function AgentShopsPage() {
       </div>
 
       <Card className="border-slate-200">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <CardTitle className="text-xl font-bold text-slate-900">My Assigned Market Outlets & Shops</CardTitle>
             <CardDescription>
               Select any shopkeeper outlet to book an order on their behalf or log a market visit check-in.
             </CardDescription>
           </div>
-          <Button asChild size="sm" className="bg-slate-900 text-white hover:bg-slate-800 gap-1.5">
-            <Link href="/agent/place-order">
-              <ShoppingCart className="size-4" /> Quick Order
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs">
+              <Link href="/agent/shops/new">
+                <Plus className="size-4" /> Add New Store
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="gap-1.5">
+              <Link href="/agent/place-order">
+                <ShoppingCart className="size-4" /> Quick Order
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent>
           {loading ? (
             <p className="text-sm text-slate-500 py-6 text-center">Loading assigned market outlets…</p>
           ) : stores.length === 0 ? (
-            <div className="p-6 text-center space-y-2">
-              <p className="text-slate-700 font-semibold">No shops assigned yet.</p>
-              <p className="text-sm text-slate-500">Ask your manager to assign retail stores to your field agent account.</p>
+            <div className="p-8 text-center space-y-3">
+              <div className="size-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                <StoreIcon className="size-6" />
+              </div>
+              <p className="text-slate-800 font-semibold text-base">No shops assigned yet.</p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                You haven't been assigned any retail shops yet, or you discovered a new outlet on your route. Click below to onboard a new store directly!
+              </p>
+              <div className="pt-2">
+                <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+                  <Link href="/agent/shops/new">
+                    <Plus className="size-4" /> Onboard First Store
+                  </Link>
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">

@@ -58,7 +58,7 @@ export default async function AgentProfilePage({
   const assignedRouteCount = agent.assigned_route_ids?.length || 0;
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-8 w-full">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 text-white shadow-md">
         <div className="flex items-center gap-4">

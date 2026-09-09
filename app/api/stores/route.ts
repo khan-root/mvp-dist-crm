@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { dbConnect } from "@/lib/db";
-import { Store, SalesRoute } from "@/lib/models";
+import { Store, SalesRoute, Agent } from "@/lib/models";
 import { getSession, requireSession } from "@/lib/auth";
 
 const STORE_TYPES = ["kirana", "supermarket", "departmental", "pharmacy", "electronics", "clothing", "other"] as const;
@@ -108,6 +108,13 @@ export async function POST(request: Request) {
     if (parsed.data.assigned_route_id) {
       await SalesRoute.updateOne(
         { _id: parsed.data.assigned_route_id, tenant_id: session.tenantId },
+        { $addToSet: { assigned_store_ids: doc._id } }
+      );
+    }
+
+    if (parsed.data.assigned_agent_id) {
+      await Agent.updateOne(
+        { _id: parsed.data.assigned_agent_id, tenant_id: session.tenantId },
         { $addToSet: { assigned_store_ids: doc._id } }
       );
     }

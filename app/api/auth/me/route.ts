@@ -27,18 +27,24 @@ export async function GET() {
     await dbConnect();
     const user = await User.findById(session.userId)
       .select("-password_hash")
+      .populate("role_id", "name code permissions")
       .lean();
     const tenant = await Tenant.findById(session.tenantId).lean();
     if (!user || !tenant) {
       return NextResponse.json({ user: null }, { status: 200 });
     }
     const roleContext = getRoleContext(user);
+    const roleDoc = user.role_id as any;
+
     return NextResponse.json({
       user: {
         ...user,
         id: user._id,
         company_name: tenant.company_name,
         subdomain: tenant.subdomain,
+        role_code: roleDoc?.code || "admin",
+        role_name: roleDoc?.name || "Administrator",
+        permissions: roleDoc?.permissions || null,
         ...roleContext,
       },
     });

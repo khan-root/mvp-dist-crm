@@ -173,6 +173,8 @@ const territorySchema = new mongoose.Schema(
     territory_name: { type: String, required: true },
     territory_code: { type: String, required: true },
     description: String,
+    province_region: { type: String, default: "KPK" },
+    city: { type: String, default: "Peshawar" },
     geographic_boundaries: {
       type: { type: String, enum: ["Polygon", "MultiPolygon"] },
       coordinates: { type: mongoose.Schema.Types.Mixed },
@@ -180,7 +182,7 @@ const territorySchema = new mongoose.Schema(
     pincodes: [String],
     cities: [String],
     states: [String],
-    country: { type: String, default: "India" },
+    country: { type: String, default: "Pakistan" },
     target_stores: { type: Number, default: 0 },
     current_stores: { type: Number, default: 0 },
     assigned_manager_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -199,13 +201,21 @@ const distributorSchema = new mongoose.Schema(
     business_license: String,
     gst_number: { type: String, required: true },
     pan_number: String,
+    industry_domain: { type: String, default: "general" },
+    operating_model: { type: String, default: "distributor" },
+    tax_registration: {
+      ntn_number: String,
+      strn_number: String,
+      drug_license_number: String,
+    },
     address: {
       line1: String,
       line2: String,
       city: String,
+      province: String,
       state: String,
       pincode: String,
-      country: { type: String, default: "India" },
+      country: { type: String, default: "Pakistan" },
       latitude: Number,
       longitude: Number,
     },
@@ -221,6 +231,7 @@ const distributorSchema = new mongoose.Schema(
       employee_count: Number,
       annual_turnover: Number,
       serviceable_pincodes: [String],
+      serviceable_cities: [String],
     },
     bank_details: {
       account_holder_name: String,
@@ -264,8 +275,9 @@ const agentSchema = new mongoose.Schema(
       line2: String,
       city: String,
       state: String,
+      province: String,
       pincode: String,
-      country: { type: String, default: "India" },
+      country: { type: String, default: "Pakistan" },
       latitude: Number,
       longitude: Number,
     },
@@ -413,6 +425,10 @@ const categorySchema = new mongoose.Schema(
     distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Distributor", required: true },
     category_name: { type: String, required: true },
     category_code: { type: String, required: true },
+    industry_domain: { type: String, default: "general" },
+    default_gst_rate: Number,
+    default_margin_percentage: Number,
+    tags: [String],
     description: String,
     parent_category_id: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null },
     level: { type: Number, default: 1 },
@@ -439,6 +455,8 @@ const brandSchema = new mongoose.Schema(
     distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Distributor", required: true },
     brand_name: { type: String, required: true },
     brand_code: { type: String, required: true },
+    industry_domain: { type: String, default: "general" },
+    principal_owner: String,
     description: String,
     logo_url: String,
     website: String,
@@ -466,6 +484,18 @@ const productSchema = new mongoose.Schema(
     sku: { type: String, required: true },
     barcode: { type: String, sparse: true },
     hsn_code: String,
+    industry_domain: { type: String, default: "general" },
+    domain_attributes: {
+      batch_number: String,
+      expiry_date: Date,
+      rx_required: { type: Boolean, default: false },
+      warranty_months: Number,
+      serial_number: String,
+      size: String,
+      color: String,
+      material: String,
+      dimension: String,
+    },
     description: String,
     short_description: String,
     specifications: { type: mongoose.Schema.Types.Mixed },
@@ -1578,6 +1608,75 @@ const salesRouteSchema = new mongoose.Schema(
   { ...baseSchemaOptions, indexes: [{ tenant_id: 1, route_code: 1, unique: true }] }
 );
 
+// ==================== FIELD FORCE GOVERNANCE POLICY ====================
+const policySchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    name: { type: String, required: true },
+    description: String,
+    industry_type: {
+      type: String,
+      enum: ["universal", "fmcg", "pharma", "electronics", "construction", "apparel", "custom"],
+      default: "universal",
+    },
+    is_active: { type: Boolean, default: true },
+    is_default: { type: Boolean, default: false },
+
+    // Tiered Order Governance Matrix
+    tiered_matrix: [
+      {
+        tier: { type: Number, required: true },
+        name: { type: String, required: true },
+        min_value: { type: Number, default: 0 },
+        max_value: { type: Number, default: 4999 },
+        systemic_action: { type: String },
+        approval_sla_hours: { type: Number, default: 0 },
+        authentication_required: {
+          type: String,
+          enum: ["gps_50m", "gps_signature", "gps_otp_or_esign", "dual_signoff_deposit"],
+          default: "gps_50m",
+        },
+      },
+    ],
+
+    // Credit Risk & Commercial Policies
+    credit_guardrails: {
+      hard_credit_freeze_days: { type: Number, default: 30 },
+      exposure_ceiling_enabled: { type: Boolean, default: true },
+      collection_linked_booking: { type: Boolean, default: true },
+      max_discretionary_discount_pct: { type: Number, default: 5 },
+    },
+
+    // Anti-Fraud & Physical Perimeter Policies
+    antifraud_guardrails: {
+      geofence_radius_meters: { type: Number, default: 50 },
+      buyer_verification_threshold_rs: { type: Number, default: 10000 },
+      allow_geotag_update_request: { type: Boolean, default: true },
+    },
+
+    // Inventory Sync Policies
+    inventory_sync: {
+      active_stock_reservation_mins: { type: Number, default: 15 },
+      backorder_workflow_enabled: { type: Boolean, default: true },
+    },
+
+    // Agent & Store Owner Commission & Incentive Rules
+    commission_rules: {
+      agent_commission_pct: { type: Number, default: 2.5 },
+      agent_flat_bonus_rs: { type: Number, default: 0 },
+      store_rebate_pct: { type: Number, default: 1.5 },
+      store_cashback_flat_rs: { type: Number, default: 0 },
+      min_order_value_eligible: { type: Number, default: 0 },
+      max_order_value_eligible: { type: Number, default: 999999 },
+      applicable_scope: { type: String, enum: ["all_products", "order_value_range", "specific_categories"], default: "all_products" },
+      applicable_category_name: { type: String },
+    },
+
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  baseSchemaOptions
+);
+
 // ==================== EXPORT ALL MODELS ====================
 export const Tenant = mongoose.models.Tenant ?? mongoose.model("Tenant", tenantSchema);
 export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
@@ -1587,6 +1686,7 @@ export const Distributor = mongoose.models.Distributor ?? mongoose.model("Distri
 export const Agent = mongoose.models.Agent ?? mongoose.model("Agent", agentSchema);
 export const Store = mongoose.models.Store ?? mongoose.model("Store", storeSchema);
 export const SalesRoute = mongoose.models.SalesRoute ?? mongoose.model("SalesRoute", salesRouteSchema);
+export const Policy = mongoose.models.Policy ?? mongoose.model("Policy", policySchema);
 export const Category = mongoose.models.Category ?? mongoose.model("Category", categorySchema);
 export const Brand = mongoose.models.Brand ?? mongoose.model("Brand", brandSchema);
 export const Product = mongoose.models.Product ?? mongoose.model("Product", productSchema);

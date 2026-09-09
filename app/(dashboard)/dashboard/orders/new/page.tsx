@@ -140,7 +140,7 @@ export default function NewOrderPage() {
   const grandTotal = subtotal - totalDiscount + totalTax;
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full">
       <Card>
         <CardHeader>
           <CardTitle>New order</CardTitle>

@@ -13,6 +13,20 @@ const CreateSchema = z.object({
   sku: z.string().min(1),
   barcode: z.string().optional(),
   hsn_code: z.string().optional(),
+  industry_domain: z.string().optional(),
+  domain_attributes: z
+    .object({
+      batch_number: z.string().optional(),
+      expiry_date: z.string().optional(),
+      rx_required: z.boolean().optional(),
+      warranty_months: z.number().optional(),
+      serial_number: z.string().optional(),
+      size: z.string().optional(),
+      color: z.string().optional(),
+      material: z.string().optional(),
+      dimension: z.string().optional(),
+    })
+    .optional(),
   description: z.string().optional(),
   short_description: z.string().optional(),
   specifications: z.record(z.string(), z.unknown()).optional(),

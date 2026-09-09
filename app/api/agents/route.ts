@@ -27,6 +27,7 @@ const CreateSchema = z.object({
       line2: z.string().optional(),
       city: z.string().optional(),
       state: z.string().optional(),
+      province: z.string().optional(),
       pincode: z.string().optional(),
       country: z.string().optional(),
       latitude: z.number().optional(),

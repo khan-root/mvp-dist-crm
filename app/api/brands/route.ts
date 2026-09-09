@@ -8,7 +8,17 @@ const CreateSchema = z.object({
   distributor_id: z.string().min(1),
   brand_name: z.string().min(1),
   brand_code: z.string().min(1),
+  industry_domain: z.string().optional(),
+  principal_owner: z.string().optional(),
   description: z.string().optional(),
+  brand_details: z
+    .object({
+      manufacturer: z.string().optional(),
+      country_of_origin: z.string().optional(),
+      established_year: z.number().optional(),
+      certifications: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export async function GET(request: Request) {

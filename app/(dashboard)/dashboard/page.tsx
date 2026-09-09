@@ -110,6 +110,46 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {/* Regional Geo-Coverage Quick Filter Hub */}
+      <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-slate-50 to-white">
+        <CardHeader className="pb-3 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Compass className="h-5 w-5 text-emerald-600" />
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900">Regional Distribution Matrix (Pakistan)</CardTitle>
+                <CardDescription>Quick filter distributors, routes, stores, and agents by Province / Federal Capital</CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { name: "Punjab", code: "Punjab", desc: "Lahore, FSL, RWP, SKT" },
+              { name: "Sindh", code: "Sindh", desc: "Karachi, Sukkur, HYD" },
+              { name: "KPK", code: "KPK", desc: "Peshawar, Swat, Mardan" },
+              { name: "Balochistan", code: "Balochistan", desc: "Quetta, Gwadar, Khuzdar" },
+              { name: "Islamabad (ICT)", code: "Islamabad (ICT)", desc: "Federal Capital Hub" },
+              { name: "Gilgit-Baltistan", code: "Gilgit-Baltistan", desc: "Gilgit, Skardu, Hunza" },
+              { name: "AJK", code: "AJK", desc: "Muzaffarabad, Mirpur" },
+            ].map((prov) => (
+              <Link
+                key={prov.name}
+                href={`/dashboard/distributors`}
+                className="p-3 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-sm transition-all group"
+              >
+                <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center justify-between">
+                  <span>{prov.name}</span>
+                  <ArrowRight className="size-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1 truncate">{prov.desc}</div>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Revenue & Recent Orders Split */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Revenue Card */}

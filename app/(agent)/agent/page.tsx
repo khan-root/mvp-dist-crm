@@ -17,6 +17,7 @@ import {
   Navigation,
   ArrowRight,
   Compass,
+  Plus,
 } from "lucide-react";
 import { LogVisitDialog } from "@/components/log-visit-dialog";
 import { RouteGoogleMap } from "@/components/route-google-map";
@@ -194,7 +195,7 @@ export default async function AgentPortalPage() {
   const primaryRoute = assignedRoutes[0] || null;
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-8 w-full">
       {/* Field Operations Banner Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 text-white shadow-md">
         <div className="space-y-1">
@@ -209,8 +210,14 @@ export default async function AgentPortalPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <Button asChild className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md gap-2 font-semibold">
+            <Link href="/agent/shops/new">
+              <Plus className="size-4" /> Onboard New Store
+            </Link>
+          </Button>
+
+          <Button variant="outline" asChild className="border-slate-700 bg-slate-800 text-white hover:bg-slate-700 gap-2">
             <Link href="/agent/place-order">
-              <ShoppingCart className="size-4" /> Take Order from Shopkeeper
+              <ShoppingCart className="size-4 text-emerald-400" /> Book Order
             </Link>
           </Button>
 
@@ -218,16 +225,10 @@ export default async function AgentPortalPage() {
             stores={assignedStores}
             trigger={
               <Button variant="outline" className="border-slate-700 bg-slate-800 text-white hover:bg-slate-700 gap-2">
-                <MapPin className="size-4 text-emerald-400" /> Log Store Visit
+                <MapPin className="size-4 text-emerald-400" /> Log Visit
               </Button>
             }
           />
-
-          <Button variant="outline" asChild className="border-slate-700 bg-slate-800 text-white hover:bg-slate-700">
-            <Link href="/agent/shops">
-              View All Shops <ArrowRight className="size-4 ml-1" />
-            </Link>
-          </Button>
         </div>
       </div>
 

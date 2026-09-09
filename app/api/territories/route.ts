@@ -8,10 +8,13 @@ const CreateSchema = z.object({
   territory_name: z.string().min(1),
   territory_code: z.string().min(1),
   description: z.string().optional(),
+  province_region: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  target_stores: z.number().optional(),
   pincodes: z.array(z.string()).optional(),
   cities: z.array(z.string()).optional(),
   states: z.array(z.string()).optional(),
-  country: z.string().optional(),
 });
 
 export async function GET() {

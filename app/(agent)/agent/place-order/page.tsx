@@ -140,7 +140,7 @@ export default function AgentPlaceOrderPage() {
   const total = lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/agent/shops">

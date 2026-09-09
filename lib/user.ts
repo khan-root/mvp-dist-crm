@@ -29,6 +29,14 @@ export interface CurrentUser {
   company_name: string;
   subdomain?: string;
   user_type: "admin" | "agent" | "store";
+  role_code?: string;
+  role_name?: string;
+  permissions?: {
+    modules?: Array<{
+      module_name: string;
+      actions: string[];
+    }>;
+  } | null;
   agent_id: string | null;
   store_id: string | null;
   tenant_id: string;
@@ -45,16 +53,21 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     await dbConnect();
     const user = await User.findById(session.userId)
       .select("-password_hash")
+      .populate("role_id", "name code permissions")
       .lean();
     const tenant = await Tenant.findById(session.tenantId).lean();
     if (!user || !tenant) return null;
     const roleContext = getRoleContext(user);
+    const roleDoc = user.role_id as any;
     return {
       ...user,
       id: user._id,
       company_name: tenant.company_name,
       subdomain: tenant.subdomain,
       tenant_id: session.tenantId,
+      role_code: roleDoc?.code || "admin",
+      role_name: roleDoc?.name || "Administrator",
+      permissions: roleDoc?.permissions || null,
       ...roleContext,
     } as CurrentUser;
   } catch {

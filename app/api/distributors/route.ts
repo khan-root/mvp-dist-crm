@@ -7,9 +7,18 @@ import { requireSession } from "@/lib/auth";
 const CreateSchema = z.object({
   company_name: z.string().min(1),
   distributor_code: z.string().min(1),
+  industry_domain: z.string().optional(),
+  operating_model: z.string().optional(),
   business_license: z.string().optional(),
   gst_number: z.string().min(1),
   pan_number: z.string().optional(),
+  tax_registration: z
+    .object({
+      ntn_number: z.string().optional(),
+      strn_number: z.string().optional(),
+      drug_license_number: z.string().optional(),
+    })
+    .optional(),
   contact: z.object({
     phone: z.string().min(1),
     email: z.string().email(),
@@ -21,6 +30,7 @@ const CreateSchema = z.object({
       line1: z.string().optional(),
       line2: z.string().optional(),
       city: z.string().optional(),
+      province: z.string().optional(),
       state: z.string().optional(),
       pincode: z.string().optional(),
       country: z.string().optional(),
@@ -35,6 +45,7 @@ const CreateSchema = z.object({
       employee_count: z.number().optional(),
       annual_turnover: z.number().optional(),
       serviceable_pincodes: z.array(z.string()).optional(),
+      serviceable_cities: z.array(z.string()).optional(),
     })
     .optional(),
   bank_details: z

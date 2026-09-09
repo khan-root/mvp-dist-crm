@@ -103,7 +103,7 @@ export default function NewStorePage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="w-full space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2 text-slate-900">

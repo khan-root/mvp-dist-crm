@@ -16,6 +16,20 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const DOMAINS = [
+  { value: "fmcg", label: "FMCG / Packaged Consumer Goods" },
+  { value: "pharma", label: "Pharmaceuticals & Healthcare" },
+  { value: "electronics", label: "Electronics & Tech" },
+  { value: "apparel", label: "Apparel & Fashion" },
+  { value: "hardware", label: "Hardware, Electrical & Plumbing" },
+  { value: "auto_parts", label: "Auto Spare Parts & Lubricants" },
+  { value: "cosmetics", label: "Cosmetics & Personal Care" },
+  { value: "agriculture", label: "Agriculture & Fertilizers" },
+  { value: "general", label: "General Multi-Domain" },
+];
+
+const COUNTRIES = ["Pakistan", "Japan", "Germany", "China", "United States", "United Kingdom", "South Korea", "Turkey", "UAE"];
+
 export function BrandForm({
   distributors,
   trigger,
@@ -28,6 +42,10 @@ export function BrandForm({
   const [distributor_id, setDistributorId] = useState("");
   const [brand_name, setBrandName] = useState("");
   const [brand_code, setBrandCode] = useState("");
+  const [industry_domain, setIndustryDomain] = useState("fmcg");
+  const [principal_owner, setPrincipalOwner] = useState("");
+  const [country_of_origin, setCountryOfOrigin] = useState("Pakistan");
+  const [certifications, setCertifications] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,11 +59,22 @@ export function BrandForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ distributor_id, brand_name, brand_code, description: description || undefined }),
+        body: JSON.stringify({
+          distributor_id,
+          brand_name,
+          brand_code,
+          industry_domain,
+          principal_owner: principal_owner || undefined,
+          brand_details: {
+            country_of_origin,
+            certifications: certifications ? certifications.split(",").map((c) => c.trim()) : undefined,
+          },
+          description: description || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create");
+        setError(data.error || "Failed to create brand");
         return;
       }
       setOpen(false);
@@ -64,16 +93,16 @@ export function BrandForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add brand</DialogTitle>
-          <DialogDescription>Create a product brand for a distributor</DialogDescription>
+          <DialogTitle>Add Brand</DialogTitle>
+          <DialogDescription>Create a manufacturer or principal brand for your domain catalog</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label>Distributor</Label>
+            <Label>Distributor Hub *</Label>
             <Select value={distributor_id} onValueChange={setDistributorId} required>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select distributor" /></SelectTrigger>
               <SelectContent>
                 {distributors.map((d) => (
                   <SelectItem key={d._id} value={d._id}>{d.company_name}</SelectItem>
@@ -81,22 +110,79 @@ export function BrandForm({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="brand_name">Name</Label>
-            <Input id="brand_name" value={brand_name} onChange={(e) => setBrandName(e.target.value)} required />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="brand_name">Brand Name *</Label>
+              <Input
+                id="brand_name"
+                placeholder="e.g. Nestlé / Samsung"
+                value={brand_name}
+                onChange={(e) => setBrandName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="brand_code">Brand Code *</Label>
+              <Input
+                id="brand_code"
+                placeholder="e.g. BRD-NES-01"
+                value={brand_code}
+                onChange={(e) => setBrandCode(e.target.value)}
+                required
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="brand_code">Code</Label>
-            <Input id="brand_code" value={brand_code} onChange={(e) => setBrandCode(e.target.value)} required />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Industry Domain *</Label>
+              <Select value={industry_domain} onValueChange={setIndustryDomain}>
+                <SelectTrigger><SelectValue placeholder="Select domain" /></SelectTrigger>
+                <SelectContent>
+                  {DOMAINS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Country of Origin</Label>
+              <Select value={country_of_origin} onValueChange={setCountryOfOrigin}>
+                <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Label htmlFor="principal_owner">Principal Brand Owner / Manufacturer</Label>
+            <Input
+              id="principal_owner"
+              placeholder="e.g. Nestlé Pakistan S.A."
+              value={principal_owner}
+              onChange={(e) => setPrincipalOwner(e.target.value)}
+            />
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <DialogFooter>
+
+          <div className="space-y-2">
+            <Label htmlFor="certifications">Certifications (comma separated)</Label>
+            <Input
+              id="certifications"
+              placeholder="e.g. DRAP Approved, ISO 9001, Halal Certified"
+              value={certifications}
+              onChange={(e) => setCertifications(e.target.value)}
+            />
+          </div>
+
+          {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+          <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Creating…" : "Create"}</Button>
+            <Button type="submit" disabled={loading}>{loading ? "Saving…" : "Save Brand"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
