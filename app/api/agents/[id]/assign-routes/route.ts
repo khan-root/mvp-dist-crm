@@ -38,8 +38,8 @@ export async function GET(
       new Set([
         ...agentRouteIds,
         ...(allRoutes || [])
-          .filter((r) => r.assigned_agent_ids?.some((a) => a.toString() === agentId))
-          .map((r) => r._id.toString()),
+          .filter((r: any) => r.assigned_agent_ids?.some((a: any) => a.toString() === agentId))
+          .map((r: any) => r._id.toString()),
       ])
     );
 

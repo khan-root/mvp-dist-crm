@@ -237,9 +237,13 @@ export function BulkImportDialog({
                         <TableRow key={idx} className="hover:bg-slate-50 text-xs">
                           <TableCell>
                             {isValid ? (
-                              <CheckCircle2 className="size-4 text-emerald-600" title="Valid Row" />
+                              <span title="Valid Row">
+                                <CheckCircle2 className="size-4 text-emerald-600" />
+                              </span>
                             ) : (
-                              <AlertCircle className="size-4 text-rose-600" title={`Missing: ${missing.join(", ")}`} />
+                              <span title={`Missing: ${missing.join(", ")}`}>
+                                <AlertCircle className="size-4 text-rose-600" />
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className="font-mono text-slate-500">{idx + 1}</TableCell>

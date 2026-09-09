@@ -26,7 +26,6 @@ import {
   Search,
   CreditCard,
   UserCheck,
-  UserGroup,
   FolderPlus,
   UsersRound,
 } from "lucide-react";

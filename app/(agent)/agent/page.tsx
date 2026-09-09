@@ -166,6 +166,7 @@ async function getAgentData(agentId: string, tenantId: string) {
         latitude: s.address?.latitude || s.latitude || 0,
         longitude: s.address?.longitude || s.longitude || 0,
         city: s.address?.city,
+        address: s.address,
       };
     }),
     ordersCount,

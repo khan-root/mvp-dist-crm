@@ -59,6 +59,7 @@ interface RouteGoogleMapProps {
   stores?: StorePoint[];
   agents?: AgentPoint[];
   visits?: VisitPoint[];
+  routeName?: string;
   onPointsChange?: (data: {
     start: LatLngPoint | null;
     end: LatLngPoint | null;

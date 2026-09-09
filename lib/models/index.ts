@@ -1862,6 +1862,7 @@ export const Distributor = mongoose.models.Distributor ?? mongoose.model("Distri
 export const Agent = mongoose.models.Agent ?? mongoose.model("Agent", agentSchema);
 export const Store = mongoose.models.Store ?? mongoose.model("Store", storeSchema);
 export const SalesRoute = mongoose.models.SalesRoute ?? mongoose.model("SalesRoute", salesRouteSchema);
+export const Route = SalesRoute;
 export const Policy = mongoose.models.Policy ?? mongoose.model("Policy", policySchema);
 export const AgentTeam = mongoose.models.AgentTeam ?? mongoose.model("AgentTeam", agentTeamSchema);
 export const AttendancePolicy = mongoose.models.AttendancePolicy ?? mongoose.model("AttendancePolicy", attendancePolicySchema);

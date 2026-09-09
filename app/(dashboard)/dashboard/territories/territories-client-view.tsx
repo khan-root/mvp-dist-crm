@@ -38,6 +38,7 @@ export function TerritoriesClientView({
   const [geoFilters, setGeoFilters] = useState<GeoFilterState>({
     region: "all",
     city: "all",
+    domain: "all",
     territoryId: "all",
     distributorId: "all",
     search: "",

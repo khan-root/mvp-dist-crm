@@ -14,7 +14,9 @@ interface AssignedStore {
   store_name: string;
   store_type?: string;
   owner_info?: { name?: string; phone?: string };
-  address?: { city?: string; state?: string };
+  latitude?: number;
+  longitude?: number;
+  address?: { city?: string; state?: string; latitude?: number; longitude?: number } | any;
 }
 
 export default function AgentShopsPage() {

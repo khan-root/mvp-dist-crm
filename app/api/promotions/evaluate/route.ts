@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const appliedPromos: string[] = [];
 
     // Priority 1: BOGO Offers
-    const bogoPromos = activePromos.filter((p) => p.promo_type === "bogo" && p.bogo_rules);
+    const bogoPromos = activePromos.filter((p: any) => p.promo_type === "bogo" && p.bogo_rules);
     for (const promo of bogoPromos) {
       const rule = promo.bogo_rules;
       if (!rule) continue;
@@ -69,11 +69,11 @@ export async function POST(request: Request) {
     }
 
     // Priority 2: Slab Discounts
-    const slabPromos = activePromos.filter((p) => p.promo_type === "slab" && p.slab_rules);
+    const slabPromos = activePromos.filter((p: any) => p.promo_type === "slab" && p.slab_rules);
     for (const item of parsed.data.items) {
       for (const promo of slabPromos) {
         const matchingSlab = promo.slab_rules?.find(
-          (s) => item.quantity >= s.min_quantity && item.quantity <= s.max_quantity
+          (s: any) => item.quantity >= s.min_quantity && item.quantity <= s.max_quantity
         );
         if (matchingSlab) {
           const itemTotal = item.quantity * item.unit_price;

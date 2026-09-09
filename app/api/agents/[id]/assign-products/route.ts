@@ -38,7 +38,7 @@ export async function GET(
       .sort({ product_name: 1 })
       .lean();
 
-    const assignedIds = (agent.assigned_product_ids || []).map((id) => id.toString());
+    const assignedIds = (agent.assigned_product_ids || []).map((id: any) => id.toString());
 
     return NextResponse.json({
       data: {

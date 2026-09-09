@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface PermissionGuardProps {
   module: string;
-  action?: "read" | "write" | "update" | "delete";
+  action?: "read" | "write" | "update" | "delete" | "create";
   children: React.ReactNode;
 }
 

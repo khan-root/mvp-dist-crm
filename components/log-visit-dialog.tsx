@@ -22,10 +22,10 @@ interface AssignedStore {
   _id: string;
   store_code: string;
   store_name: string;
-  owner_info?: { name?: string };
+  owner_info?: { name?: string; phone?: string };
   latitude?: number;
   longitude?: number;
-  address?: { latitude?: number; longitude?: number };
+  address?: { latitude?: number; longitude?: number; city?: string; state?: string } | any;
 }
 
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {

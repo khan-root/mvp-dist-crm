@@ -83,7 +83,7 @@ export function CatalogClientView({
       const matchCode = c.category_code?.toLowerCase().includes(q);
       if (!matchName && !matchCode) return false;
     }
-    if (geoFilters.domain !== "all") {
+    if (geoFilters.domain && geoFilters.domain !== "all") {
       const cDomain = c.industry_domain?.toLowerCase() || "general";
       if (cDomain !== geoFilters.domain.toLowerCase()) return false;
     }
@@ -102,7 +102,7 @@ export function CatalogClientView({
       const matchOwner = b.principal_owner?.toLowerCase().includes(q);
       if (!matchName && !matchCode && !matchOwner) return false;
     }
-    if (geoFilters.domain !== "all") {
+    if (geoFilters.domain && geoFilters.domain !== "all") {
       const bDomain = b.industry_domain?.toLowerCase() || "general";
       if (bDomain !== geoFilters.domain.toLowerCase()) return false;
     }
