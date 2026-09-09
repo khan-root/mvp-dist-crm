@@ -1,65 +1,68 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { dbConnect } from "@/lib/db";
-import { Brand } from "@/lib/models";
-import { requireSession } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import connectDB from "@/lib/db";
+import { Brand, Tenant } from "@/lib/models";
 
-const CreateSchema = z.object({
-  distributor_id: z.string().min(1),
-  brand_name: z.string().min(1),
-  brand_code: z.string().min(1),
-  industry_domain: z.string().optional(),
-  principal_owner: z.string().optional(),
-  description: z.string().optional(),
-  brand_details: z
-    .object({
-      manufacturer: z.string().optional(),
-      country_of_origin: z.string().optional(),
-      established_year: z.number().optional(),
-      certifications: z.array(z.string()).optional(),
-    })
-    .optional(),
-});
-
-export async function GET(request: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const session = await requireSession();
-    const { searchParams } = new URL(request.url);
-    const distributorId = searchParams.get("distributor_id");
-    await dbConnect();
-    const filter: Record<string, unknown> = { tenant_id: session.tenantId, is_active: true };
-    if (distributorId) filter.distributor_id = distributorId;
-    const list = await Brand.find(filter).sort({ brand_name: 1 }).lean();
-    return NextResponse.json({ data: list });
-  } catch (e) {
-    if (e instanceof Response) throw e;
-    return NextResponse.json({ error: "Failed to list brands" }, { status: 500 });
+    await connectDB();
+    const brands = await Brand.find().sort({ brand_name: 1 }).lean();
+    return NextResponse.json({ success: true, data: brands });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const session = await requireSession();
-    const body = await request.json();
-    const parsed = CreateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
+    await connectDB();
+    const body = await req.json();
+
+    const tenant = await Tenant.findOne();
+    if (!tenant) {
+      return NextResponse.json({ success: false, error: "Tenant not found" }, { status: 404 });
     }
-    await dbConnect();
-    const existing = await Brand.findOne({
-      tenant_id: session.tenantId,
-      distributor_id: parsed.data.distributor_id,
-      brand_code: parsed.data.brand_code,
-    });
-    if (existing) return NextResponse.json({ error: "Brand code already exists for this distributor" }, { status: 409 });
+
     const doc = await Brand.create({
-      ...parsed.data,
-      tenant_id: session.tenantId,
-      created_by: session.userId,
+      tenant_id: tenant._id,
+      ...body,
     });
-    return NextResponse.json({ data: doc });
-  } catch (e) {
-    if (e instanceof Response) throw e;
-    return NextResponse.json({ error: "Failed to create brand" }, { status: 500 });
+
+    return NextResponse.json({ success: true, message: "Brand created successfully", data: doc });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    await connectDB();
+    const body = await req.json();
+    const { _id, ...updateData } = body;
+
+    if (!_id) {
+      return NextResponse.json({ success: false, error: "Brand ID required" }, { status: 400 });
+    }
+
+    const updated = await Brand.findByIdAndUpdate(_id, updateData, { new: true });
+    return NextResponse.json({ success: true, message: "Brand updated successfully", data: updated });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Brand ID required" }, { status: 400 });
+    }
+
+    await Brand.findByIdAndDelete(id);
+    return NextResponse.json({ success: true, message: "Brand deleted successfully" });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

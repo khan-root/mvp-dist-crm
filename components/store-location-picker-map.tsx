@@ -166,7 +166,7 @@ export function StoreLocationPickerMap({
   function setMapPosition(lat: number, lng: number, placeObj?: any) {
     if (mapInstanceRef.current) {
       mapInstanceRef.current.panTo({ lat, lng });
-      mapInstanceRef.current.setZoom(15);
+      mapInstanceRef.current.setZoom(13);
     }
     if (markerRef.current) {
       markerRef.current.setPosition({ lat, lng });
@@ -229,7 +229,7 @@ export function StoreLocationPickerMap({
 
     const map = new google.maps.Map(mapContainerRef.current, {
       center: { lat: initialLat, lng: initialLng },
-      zoom: 14,
+      zoom: 12,
       mapTypeId: google.maps.MapTypeId.ROADMAP,
       fullscreenControl: false,
       streetViewControl: false,

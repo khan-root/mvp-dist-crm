@@ -52,19 +52,26 @@ export async function POST(request: Request) {
         ? calculateDistanceMeters(parsed.data.latitude, parsed.data.longitude, storeLat, storeLng)
         : 0;
 
-    // PRD Rule: 20-meter geofence requirement for auto-verification
-    const isWithinGeofence = distanceMeters <= 20;
+    // Geofence Rule: 100-meter radius requirement for auto-verification
+    const isWithinGeofence = distanceMeters <= 100;
     const isRouteDeviation = distanceMeters > 1000;
     const isFlagged = !isWithinGeofence || isRouteDeviation;
 
     let flagReason = "";
-    if (!isWithinGeofence) flagReason += `Outside 20m Geofence (${Math.round(distanceMeters)}m away). `;
+    if (!isWithinGeofence) flagReason += `Outside 100m Geofence (${Math.round(distanceMeters)}m away). `;
     if (isRouteDeviation) flagReason += "Major Route Deviation (>1km). ";
 
     const visit = await StoreVisit.create({
       tenant_id: session.tenantId,
       agent_id: session.userId,
       store_id: parsed.data.store_id,
+      visit_date: new Date(),
+      check_in_time: new Date(),
+      location: {
+        check_in_lat: parsed.data.latitude,
+        check_in_lng: parsed.data.longitude,
+        accuracy: Math.round(distanceMeters),
+      },
       check_in: {
         timestamp: new Date(),
         location: { latitude: parsed.data.latitude, longitude: parsed.data.longitude },
@@ -72,6 +79,7 @@ export async function POST(request: Request) {
         verified_by_geofence: isWithinGeofence,
         distance_meters: Math.round(distanceMeters),
       },
+      visit_status: isFlagged ? "planned" : "completed",
       status: isFlagged ? "flagged" : "completed",
       flags: isFlagged
         ? {

@@ -25,6 +25,9 @@ import {
   FolderTree,
   Shield,
   UserCheck,
+  Radio,
+  Clock,
+  Ship,
 } from "lucide-react";
 import {
   Sidebar,
@@ -100,6 +103,7 @@ const rawNavGroups: NavGroup[] = [
         subItems: [
           { title: "Inventory & Stock Levels", href: "/dashboard/inventory", icon: Boxes, module: "inventory" },
           { title: "Warehouse Hubs", href: "/dashboard/warehouses", icon: WarehouseIcon, module: "inventory" },
+          { title: "Supply Chain & Repackaging", href: "/dashboard/supply-chain", icon: Ship, module: "inventory" },
         ],
       },
     ],
@@ -121,6 +125,7 @@ const rawNavGroups: NavGroup[] = [
         subItems: [
           { title: "All Field Agents", href: "/dashboard/agents", icon: Users, module: "agents" },
           { title: "Onboard Field Agent", href: "/dashboard/agents/new", icon: UserPlus, module: "agents" },
+          { title: "Live Telematics & Radar", href: "/dashboard/telematics", icon: Radio, module: "agents" },
         ],
       },
       {
@@ -154,6 +159,21 @@ const rawNavGroups: NavGroup[] = [
       },
     ],
   },
+  {
+    label: "Human Resources (HR)",
+    items: [
+      {
+        title: "HR & Team Operations",
+        icon: Building2,
+        subItems: [
+          { title: "Teams & Agent Groups", href: "/dashboard/hr?tab=teams", icon: Users, module: "agents" },
+          { title: "Shift Roster Logs", href: "/dashboard/hr?tab=attendance", icon: Clock, module: "agents" },
+          { title: "Shift Policy Studio", href: "/dashboard/hr?tab=policies", icon: ShieldCheck, module: "policies" },
+          { title: "Monthly Payroll Studio", href: "/dashboard/hr?tab=payroll", icon: Zap, module: "policies" },
+        ],
+      },
+    ],
+  },
 ];
 
 export function DashboardSidebar({
@@ -175,6 +195,7 @@ export function DashboardSidebar({
     "Outlets & Retail": true,
     "Products & Master SKUs": true,
     "Governance & SOPs": true,
+    "HR & Team Operations": true,
   });
 
   useEffect(() => {

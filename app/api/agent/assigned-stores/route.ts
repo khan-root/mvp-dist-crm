@@ -55,7 +55,7 @@ export async function GET() {
       tenant_id: session.tenantId,
       is_active: true,
     })
-      .select("store_code store_name store_type owner_info address latitude longitude assigned_agent_id assigned_route_id territory_id")
+      .select("store_code store_name store_type owner_info contact_person contact phone owner_name owner_phone address latitude longitude assigned_agent_id assigned_route_id territory_id")
       .sort({ store_name: 1 })
       .lean();
 
@@ -81,7 +81,22 @@ export async function GET() {
       return false;
     });
 
-    return NextResponse.json({ data: filtered });
+    const mapped = filtered.map((s: any) => {
+      const name = s.owner_info?.name || s.contact_person?.name || s.owner_name || "Shopkeeper";
+      const phone = s.owner_info?.phone || s.contact_person?.phone || s.contact?.phone || s.owner_phone || s.phone || "";
+      return {
+        ...s,
+        owner_name: name,
+        owner_phone: phone,
+        owner_info: {
+          name,
+          phone,
+          ...s.owner_info,
+        },
+      };
+    });
+
+    return NextResponse.json({ data: mapped });
   } catch (e) {
     console.error("Agent assigned-stores error:", e);
     return NextResponse.json({ error: "Failed to load stores" }, { status: 500 });

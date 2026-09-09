@@ -11,6 +11,7 @@ import { AssignAgentDropdown } from "@/components/assign-agent-dropdown";
 import { GlobalGeoFilter, GeoFilterState } from "@/components/global-geo-filter";
 import { matchesProvince } from "@/lib/data/citiesData";
 import { BulkImportDialog } from "@/components/bulk-import-dialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 interface StoreItem {
   _id: string;
@@ -31,6 +32,9 @@ export function StoresClientView({
   agents: any[];
   territories?: any[];
 }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const [geoFilters, setGeoFilters] = useState<GeoFilterState>({
     region: "all",
     city: "all",
@@ -67,71 +71,87 @@ export function StoresClientView({
     return true;
   });
 
+  const totalPages = Math.ceil(filteredStores.length / pageSize) || 1;
+  const paginatedStores = filteredStores.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="space-y-6 w-full">
       <GlobalGeoFilter
-        onFilterChange={setGeoFilters}
+        onFilterChange={(filters) => {
+          setGeoFilters(filters);
+          setCurrentPage(1);
+        }}
         territories={territories}
         placeholderSearch="Search stores by shop name, code, owner or city…"
       />
 
-      <Card className="border-slate-200">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
           <div>
             <CardTitle className="text-xl font-bold text-slate-900">Retail Outlets & Stores ({filteredStores.length})</CardTitle>
             <CardDescription>Assign field agents for order booking and delivery routes.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <BulkImportDialog entityType="stores" onImportSuccess={() => window.location.reload()} />
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs">
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs cursor-pointer">
               <Link href="/dashboard/stores/new">
                 <Plus className="size-4" /> Add Store
               </Link>
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="pt-4 space-y-4">
           {filteredStores.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-sm">No stores matching your geographic filters.</div>
           ) : (
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Store Name</TableHead>
-                  <TableHead>Category / Type</TableHead>
-                  <TableHead>Assigned Agent</TableHead>
-                  <TableHead>Owner Info</TableHead>
-                  <TableHead>Location / City</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStores.map((s) => (
-                  <TableRow key={s._id} className="hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs font-bold text-slate-900">{s.store_code}</TableCell>
-                    <TableCell className="font-semibold text-slate-900">{s.store_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize text-xs bg-slate-50">
-                        {s.store_type || "Kirana"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <AssignAgentDropdown
-                        storeId={s._id}
-                        currentAgentId={s.assigned_agent_id?._id ?? null}
-                        agents={agents}
-                      />
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {s.owner_info?.name || "Shopkeeper"} {s.owner_info?.phone ? `(${s.owner_info.phone})` : ""}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {[s.address?.line1, s.address?.city].filter(Boolean).join(", ") || "Market Outlet"}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="font-semibold">Code</TableHead>
+                    <TableHead className="font-semibold">Store Name</TableHead>
+                    <TableHead className="font-semibold">Category / Type</TableHead>
+                    <TableHead className="font-semibold">Assigned Agent</TableHead>
+                    <TableHead className="font-semibold">Owner Info</TableHead>
+                    <TableHead className="font-semibold">Location / City</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedStores.map((s) => (
+                    <TableRow key={s._id} className="hover:bg-slate-50 transition-colors">
+                      <TableCell className="font-mono text-xs font-bold text-emerald-700">{s.store_code}</TableCell>
+                      <TableCell className="font-semibold text-slate-900">{s.store_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize text-xs bg-slate-50 border-slate-200">
+                          {s.store_type || "Kirana"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <AssignAgentDropdown
+                          storeId={s._id}
+                          currentAgentId={s.assigned_agent_id?._id ?? null}
+                          agents={agents}
+                        />
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 font-medium">
+                        👤 {s.owner_info?.name || "Shopkeeper"} {s.owner_info?.phone ? `(📞 ${s.owner_info.phone})` : ""}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        📍 {[s.address?.line1, s.address?.city].filter(Boolean).join(", ") || "Market Outlet"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+                totalItems={filteredStores.length}
+                pageSize={pageSize}
+              />
+            </>
           )}
         </CardContent>
       </Card>

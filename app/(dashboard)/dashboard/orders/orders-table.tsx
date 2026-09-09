@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GlobalGeoFilter, GeoFilterState } from "@/components/global-geo-filter";
 import { matchesProvince } from "@/lib/data/citiesData";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 type StoreRef = { _id: string; store_code?: string; store_name?: string; address?: { city?: string; province?: string } };
 type AgentRef = { _id: string; agent_code?: string; first_name?: string; last_name?: string };
@@ -44,6 +45,9 @@ const DELIVERY_OPTIONS = ["", "pending", "processing", "shipped", "out_for_deliv
 export function OrdersTable({ orders, total, agents, stores }: OrdersTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const [geoFilters, setGeoFilters] = useState<GeoFilterState>({
     region: "all",
@@ -98,22 +102,28 @@ export function OrdersTable({ orders, total, agents, stores }: OrdersTableProps)
     return true;
   });
 
+  const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="space-y-4 w-full">
       <GlobalGeoFilter
-        onFilterChange={setGeoFilters}
+        onFilterChange={(filters) => {
+          setGeoFilters(filters);
+          setCurrentPage(1);
+        }}
         placeholderSearch="Search orders by order #, store name, or agent…"
       />
 
-      <Card className="border shadow-sm">
+      <Card className="border border-slate-200 shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4 border-b pb-4">
-          <CardTitle className="text-lg">Orders List ({filteredOrders.length} / {total})</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">Orders List ({filteredOrders.length} / {total})</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={status || "_all"} onValueChange={(v) => setFilter("status", v)}>
               <SelectTrigger className="w-[130px] h-8 text-xs">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="_all">All status</SelectItem>
                 {STATUS_OPTIONS.filter(Boolean).map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -124,7 +134,7 @@ export function OrdersTable({ orders, total, agents, stores }: OrdersTableProps)
               <SelectTrigger className="w-[150px] h-8 text-xs">
                 <SelectValue placeholder="Delivery" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="_all">All delivery</SelectItem>
                 {DELIVERY_OPTIONS.filter(Boolean).map((d) => (
                   <SelectItem key={d} value={d}>{d}</SelectItem>
@@ -135,7 +145,7 @@ export function OrdersTable({ orders, total, agents, stores }: OrdersTableProps)
               <SelectTrigger className="w-[180px] h-8 text-xs">
                 <SelectValue placeholder="Agent" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="_all">All agents</SelectItem>
                 {agents.map((a) => (
                   <SelectItem key={a._id} value={a._id}>{a.agent_code} · {[a.first_name, a.last_name].filter(Boolean).join(" ")}</SelectItem>
@@ -146,7 +156,7 @@ export function OrdersTable({ orders, total, agents, stores }: OrdersTableProps)
               <SelectTrigger className="w-[180px] h-8 text-xs">
                 <SelectValue placeholder="Store" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="_all">All stores</SelectItem>
                 {stores.map((s) => (
                   <SelectItem key={s._id} value={s._id}>{s.store_code} · {s.store_name}</SelectItem>
@@ -158,58 +168,68 @@ export function OrdersTable({ orders, total, agents, stores }: OrdersTableProps)
             )}
           </div>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 space-y-4">
           {filteredOrders.length === 0 ? (
-            <p className="text-muted-foreground py-8 text-center text-sm">No orders match your filter criteria.</p>
+            <p className="text-slate-500 py-8 text-center text-sm">No orders match your filter criteria.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="font-semibold">Order #</TableHead>
-                  <TableHead className="font-semibold">Store</TableHead>
-                  <TableHead className="font-semibold">Agent</TableHead>
-                  <TableHead className="font-semibold">Date</TableHead>
-                  <TableHead className="font-semibold">Total</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Delivery</TableHead>
-                  <TableHead className="font-semibold">Payment</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((o) => (
-                  <TableRow key={o._id} className="hover:bg-muted/40 transition-colors">
-                    <TableCell className="font-mono text-xs font-semibold text-primary">{o.order_number}</TableCell>
-                    <TableCell className="font-medium text-sm">
-                      {typeof o.store_id === "object" && o.store_id ? o.store_id.store_name ?? o.store_id.store_code : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {typeof o.agent_id === "object" && o.agent_id
-                        ? [o.agent_id.first_name, o.agent_id.last_name].filter(Boolean).join(" ")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(o.order_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="font-semibold text-sm">Rs. {o.grand_total.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize text-xs">
-                        {o.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="capitalize text-xs">
-                        {o.delivery_status || "pending"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={o.payment_status === "paid" ? "default" : "outline"} className="capitalize text-xs">
-                        {o.payment_status}
-                      </Badge>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="font-semibold">Order #</TableHead>
+                    <TableHead className="font-semibold">Store Outlet</TableHead>
+                    <TableHead className="font-semibold">Sales Agent</TableHead>
+                    <TableHead className="font-semibold">Order Date</TableHead>
+                    <TableHead className="font-semibold font-mono">Grand Total</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Delivery</TableHead>
+                    <TableHead className="font-semibold">Payment</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedOrders.map((o) => (
+                    <TableRow key={o._id} className="hover:bg-slate-50/80 transition-colors">
+                      <TableCell className="font-mono text-xs font-semibold text-emerald-700">{o.order_number}</TableCell>
+                      <TableCell className="font-medium text-sm text-slate-900">
+                        {typeof o.store_id === "object" && o.store_id ? o.store_id.store_name ?? o.store_id.store_code : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-700">
+                        {typeof o.agent_id === "object" && o.agent_id
+                          ? [o.agent_id.first_name, o.agent_id.last_name].filter(Boolean).join(" ")
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500 font-mono">
+                        {new Date(o.order_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="font-bold text-sm font-mono text-slate-900">Rs. {o.grand_total.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {o.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize text-xs bg-slate-50">
+                          {o.delivery_status || "pending"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={o.payment_status === "paid" ? "success" : "outline"} className="capitalize text-xs">
+                          {o.payment_status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+                totalItems={filteredOrders.length}
+                pageSize={pageSize}
+              />
+            </>
           )}
         </CardContent>
       </Card>

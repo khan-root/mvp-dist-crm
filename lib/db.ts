@@ -38,3 +38,6 @@ export async function dbConnect(): Promise<typeof mongoose> {
 
   return cached.conn;
 }
+
+export default dbConnect;
+

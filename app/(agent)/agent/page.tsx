@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { LogVisitDialog } from "@/components/log-visit-dialog";
 import { RouteGoogleMap } from "@/components/route-google-map";
+import { AgentClockInWidget } from "@/components/agent-clock-in-widget";
 
 function getHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -70,7 +71,7 @@ async function getAgentData(agentId: string, tenantId: string) {
     tenant_id: tenantId,
     is_active: true,
   })
-    .select("store_code store_name store_type owner_info address latitude longitude assigned_agent_id assigned_route_id territory_id")
+    .select("store_code store_name store_type owner_info contact_person contact phone owner_name owner_phone address latitude longitude assigned_agent_id assigned_route_id territory_id")
     .lean();
 
   const filteredStores = allStores.filter((s: any) => {
@@ -141,17 +142,32 @@ async function getAgentData(agentId: string, tenantId: string) {
       territory_name: r.territory_id?.territory_name,
     })),
     storesCount,
-    assignedStores: (assignedStores || []).map((s) => ({
-      _id: s._id.toString(),
-      store_code: s.store_code,
-      store_name: s.store_name,
-      store_type: s.store_type,
-      owner_name: s.owner_info?.name,
-      owner_phone: s.owner_info?.phone,
-      latitude: s.address?.latitude || s.latitude || 0,
-      longitude: s.address?.longitude || s.longitude || 0,
-      city: s.address?.city,
-    })),
+    assignedStores: (assignedStores || []).map((s: any) => {
+      const ownerName =
+        s.owner_info?.name ||
+        s.contact_person?.name ||
+        s.owner_name ||
+        "Shopkeeper";
+      const ownerPhone =
+        s.owner_info?.phone ||
+        s.contact_person?.phone ||
+        s.contact?.phone ||
+        s.owner_phone ||
+        s.phone ||
+        "";
+      return {
+        _id: s._id.toString(),
+        store_code: s.store_code,
+        store_name: s.store_name,
+        store_type: s.store_type,
+        owner_name: ownerName,
+        owner_phone: ownerPhone,
+        owner_info: { name: ownerName, phone: ownerPhone },
+        latitude: s.address?.latitude || s.latitude || 0,
+        longitude: s.address?.longitude || s.longitude || 0,
+        city: s.address?.city,
+      };
+    }),
     ordersCount,
     ordersDelivered,
     tripsRemaining,
@@ -231,6 +247,9 @@ export default async function AgentPortalPage() {
           />
         </div>
       </div>
+
+      {/* Agent Live Attendance Clock-In Widget */}
+      <AgentClockInWidget agentId={user.agent_id} />
 
       {/* Operational Metrics Cards Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -379,7 +398,7 @@ export default async function AgentPortalPage() {
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 font-medium">
-                      👤 {s.owner_info?.name || "Shopkeeper"} · 📞 {s.owner_info?.phone || "No phone"}
+                      👤 {s.owner_name || s.owner_info?.name || "Shopkeeper"} · 📞 {s.owner_phone || s.owner_info?.phone || "No phone"}
                     </p>
                     <p className="text-xs text-slate-500">
                       📍 {[s.address?.city, s.address?.state].filter(Boolean).join(", ") || "Market Outlet"}

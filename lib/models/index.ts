@@ -79,10 +79,12 @@ const userSchema = new mongoose.Schema(
     tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     name: { type: String },
     email: { type: String, required: true, lowercase: true },
-    phone: { type: String, required: true },
+    phone: { type: String },
     password_hash: { type: String, required: true },
-    first_name: { type: String, required: true },
-    last_name: { type: String, required: true },
+    first_name: { type: String, default: "" },
+    last_name: { type: String, default: "" },
+    assigned_facility: { type: String, default: "Main Port Facility" },
+    assigned_warehouse_id: { type: mongoose.Schema.Types.ObjectId, ref: "Warehouse" },
     profile_picture: String,
     domain_associations: [
       {
@@ -124,7 +126,7 @@ const userSchema = new mongoose.Schema(
     ...baseSchemaOptions,
     indexes: [
       { email: 1, tenant_id: 1, unique: true },
-      { phone: 1, tenant_id: 1, unique: true },
+      { phone: 1, tenant_id: 1, sparse: true },
     ],
   }
 );
@@ -295,6 +297,8 @@ const agentSchema = new mongoose.Schema(
       reporting_to: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
       security_deposit: { type: Number, default: 0 },
       commission_rate: { type: Number, default: 0 },
+      base_salary: { type: Number, default: 50000 },
+      assigned_policy_id: { type: mongoose.Schema.Types.ObjectId, ref: "AttendancePolicy" },
     },
     targets: {
       monthly_sales: { type: Number, default: 0 },
@@ -1677,6 +1681,151 @@ const policySchema = new mongoose.Schema(
   baseSchemaOptions
 );
 
+// ==================== AGENT TEAM / GROUP ====================
+const agentTeamSchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    team_name: { type: String, required: true },
+    team_code: { type: String, required: true },
+    description: String,
+    assigned_policy_id: { type: mongoose.Schema.Types.ObjectId, ref: "AttendancePolicy" },
+    assigned_agent_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Agent" }],
+    team_lead_id: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
+    is_active: { type: Boolean, default: true },
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  { ...baseSchemaOptions, indexes: [{ tenant_id: 1, team_code: 1, unique: true }] }
+);
+
+// ==================== HR & ATTENDANCE POLICY ====================
+const attendancePolicySchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    policy_name: { type: String, required: true, default: "Standard Field Shift" },
+    shift_start_time: { type: String, default: "10:00" }, // 24hr format HH:mm
+    shift_end_time: { type: String, default: "19:00" },
+    grace_period_mins: { type: Number, default: 15 },
+    allow_late_evening_compensation: { type: Boolean, default: true },
+    early_clockin_overtime: { type: Boolean, default: false },
+    overtime_rate_multiplier: { type: Number, default: 1.5 },
+    late_deduction_rate_per_hour: { type: Number, default: 200 },
+    is_default: { type: Boolean, default: true },
+    is_active: { type: Boolean, default: true },
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  baseSchemaOptions
+);
+
+// ==================== ATTENDANCE RECORD ====================
+const attendanceRecordSchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    agent_id: { type: mongoose.Schema.Types.ObjectId, ref: "Agent", required: true, index: true },
+    date: { type: String, required: true, index: true }, // Format: YYYY-MM-DD
+    clock_in: { type: Date, required: true },
+    clock_in_location: {
+      latitude: Number,
+      longitude: Number,
+      address: String,
+    },
+    clock_out: Date,
+    clock_out_location: {
+      latitude: Number,
+      longitude: Number,
+      address: String,
+    },
+    status: {
+      type: String,
+      enum: ["present", "late", "half_day", "absent"],
+      default: "present",
+    },
+    total_hours_worked: { type: Number, default: 0 },
+    effective_work_hours: { type: Number, default: 0 },
+    overtime_minutes: { type: Number, default: 0 },
+    late_minutes: { type: Number, default: 0 },
+    is_compensated: { type: Boolean, default: false },
+    shift_number: { type: Number, default: 1 },
+    shift_name: { type: String, default: "Shift 1" },
+    policy_id: { type: mongoose.Schema.Types.ObjectId, ref: "AttendancePolicy" },
+    notes: String,
+  },
+  {
+    ...baseSchemaOptions,
+    indexes: [{ tenant_id: 1, agent_id: 1, date: 1, shift_number: 1, unique: true }],
+  }
+);
+
+// ==================== PAYROLL RECORD ====================
+const payrollSchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    agent_id: { type: mongoose.Schema.Types.ObjectId, ref: "Agent", required: true, index: true },
+    payroll_month: { type: String, required: true, index: true }, // Format: YYYY-MM
+    base_salary: { type: Number, default: 50000 },
+    days_in_month: { type: Number, default: 30 },
+    days_present: { type: Number, default: 0 },
+    days_absent: { type: Number, default: 0 },
+    late_days: { type: Number, default: 0 },
+    total_overtime_hours: { type: Number, default: 0 },
+    overtime_pay: { type: Number, default: 0 },
+    commission_earnings: { type: Number, default: 0 },
+    late_deductions: { type: Number, default: 0 },
+    absent_deductions: { type: Number, default: 0 },
+    gross_salary: { type: Number, default: 0 },
+    net_payable_salary: { type: Number, default: 0 },
+    payment_status: {
+      type: String,
+      enum: ["draft", "approved", "paid", "hold"],
+      default: "draft",
+    },
+    paid_at: Date,
+    payment_reference: String,
+    remarks: String,
+    generated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  {
+    ...baseSchemaOptions,
+    indexes: [{ tenant_id: 1, agent_id: 1, payroll_month: 1, unique: true }],
+  }
+);
+
+// ==================== REPACKAGING ORDER ====================
+const repackagingOrderSchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    order_number: { type: String, required: true },
+    port_facility_name: { type: String, default: "Port Processing Hub" },
+    source_warehouse_id: { type: mongoose.Schema.Types.ObjectId, ref: "Warehouse", required: true },
+    source_product_id: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    source_quantity_used: { type: Number, required: true, min: 0 },
+    target_product_id: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    target_quantity_produced: { type: Number, required: true, min: 0 },
+    conversion_ratio: { type: String, default: "Standard Repackaging" },
+    operator_name: { type: String },
+    notes: String,
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { ...baseSchemaOptions, indexes: [{ tenant_id: 1, order_number: 1, unique: true }] }
+);
+
+// ==================== PORT SHIPMENT ====================
+const portShipmentSchema = new mongoose.Schema(
+  {
+    tenant_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    shipment_number: { type: String, required: true },
+    vessel_name: { type: String, required: true },
+    origin_country: { type: String, default: "International Port" },
+    port_facility_name: { type: String, required: true },
+    warehouse_id: { type: mongoose.Schema.Types.ObjectId, ref: "Warehouse", required: true },
+    product_id: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    quantity_received: { type: Number, required: true, min: 0 },
+    unit_of_measure: { type: String, default: "Tons" },
+    received_by_name: { type: String },
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { ...baseSchemaOptions, indexes: [{ tenant_id: 1, shipment_number: 1, unique: true }] }
+);
+
 // ==================== EXPORT ALL MODELS ====================
 export const Tenant = mongoose.models.Tenant ?? mongoose.model("Tenant", tenantSchema);
 export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
@@ -1687,6 +1836,10 @@ export const Agent = mongoose.models.Agent ?? mongoose.model("Agent", agentSchem
 export const Store = mongoose.models.Store ?? mongoose.model("Store", storeSchema);
 export const SalesRoute = mongoose.models.SalesRoute ?? mongoose.model("SalesRoute", salesRouteSchema);
 export const Policy = mongoose.models.Policy ?? mongoose.model("Policy", policySchema);
+export const AgentTeam = mongoose.models.AgentTeam ?? mongoose.model("AgentTeam", agentTeamSchema);
+export const AttendancePolicy = mongoose.models.AttendancePolicy ?? mongoose.model("AttendancePolicy", attendancePolicySchema);
+export const AttendanceRecord = mongoose.models.AttendanceRecord ?? mongoose.model("AttendanceRecord", attendanceRecordSchema);
+export const Payroll = mongoose.models.Payroll ?? mongoose.model("Payroll", payrollSchema);
 export const Category = mongoose.models.Category ?? mongoose.model("Category", categorySchema);
 export const Brand = mongoose.models.Brand ?? mongoose.model("Brand", brandSchema);
 export const Product = mongoose.models.Product ?? mongoose.model("Product", productSchema);
@@ -1695,6 +1848,8 @@ export const Warehouse = mongoose.models.Warehouse ?? mongoose.model("Warehouse"
 export const Batch = mongoose.models.Batch ?? mongoose.model("Batch", batchSchema);
 export const Inventory = mongoose.models.Inventory ?? mongoose.model("Inventory", inventorySchema);
 export const StockMovement = mongoose.models.StockMovement ?? mongoose.model("StockMovement", stockMovementSchema);
+export const RepackagingOrder = mongoose.models.RepackagingOrder ?? mongoose.model("RepackagingOrder", repackagingOrderSchema);
+export const PortShipment = mongoose.models.PortShipment ?? mongoose.model("PortShipment", portShipmentSchema);
 export const PriceList = mongoose.models.PriceList ?? mongoose.model("PriceList", priceListSchema);
 export const PriceListItem = mongoose.models.PriceListItem ?? mongoose.model("PriceListItem", priceListItemSchema);
 export const PricingRule = mongoose.models.PricingRule ?? mongoose.model("PricingRule", pricingRuleSchema);

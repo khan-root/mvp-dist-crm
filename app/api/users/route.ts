@@ -11,6 +11,8 @@ const CreateUserSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(6),
   role_id: z.string().min(1),
+  assigned_facility: z.string().optional(),
+  assigned_warehouse_id: z.string().optional(),
 });
 
 export async function GET() {
@@ -20,6 +22,7 @@ export async function GET() {
 
     const users = await User.find({ tenant_id: session.tenantId })
       .populate("role_id", "name code permissions")
+      .populate("assigned_warehouse_id", "warehouse_name warehouse_code")
       .sort({ created_at: -1 })
       .lean();
 
@@ -58,20 +61,29 @@ export async function POST(request: Request) {
 
     const password_hash = await bcrypt.hash(parsed.data.password, 10);
 
+    const nameParts = parsed.data.name.trim().split(" ");
+    const firstName = nameParts[0] || parsed.data.name;
+    const lastName = nameParts.slice(1).join(" ") || "Employee";
+
     const newUser = await User.create({
       tenant_id: session.tenantId,
       name: parsed.data.name,
+      first_name: firstName,
+      last_name: lastName,
       email: parsed.data.email.toLowerCase(),
-      phone: parsed.data.phone || undefined,
+      phone: parsed.data.phone && parsed.data.phone.trim() ? parsed.data.phone.trim() : undefined,
       password_hash,
       role_id: targetRole._id,
+      assigned_facility: parsed.data.assigned_facility || "Main Port Facility",
+      assigned_warehouse_id: parsed.data.assigned_warehouse_id ? parsed.data.assigned_warehouse_id : undefined,
       status: "active",
       created_by: session.userId,
     });
 
     return NextResponse.json({ data: newUser });
-  } catch (e) {
+  } catch (e: any) {
+    console.error("Error creating user:", e);
     if (e instanceof Response) throw e;
-    return NextResponse.json({ error: "Failed to create user account" }, { status: 500 });
+    return NextResponse.json({ error: e?.message || "Failed to create user account" }, { status: 500 });
   }
 }

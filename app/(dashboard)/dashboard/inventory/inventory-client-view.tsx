@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GlobalGeoFilter, GeoFilterState } from "@/components/global-geo-filter";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Boxes,
   AlertTriangle,
@@ -30,7 +30,6 @@ import {
   ArrowDownRight,
   RefreshCw,
   SlidersHorizontal,
-  Package,
 } from "lucide-react";
 
 interface InventoryItem {
@@ -80,6 +79,12 @@ export function InventoryClientView({
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
   const [summary, setSummary] = useState<SummaryData>(initialSummary);
   const [movements, setMovements] = useState<StockMovementData[]>(initialMovements);
+
+  // Pagination state
+  const [matrixPage, setMatrixPage] = useState(1);
+  const [movementsPage, setMovementsPage] = useState(1);
+  const pageSize = 10;
+
   const [geoFilters, setGeoFilters] = useState<GeoFilterState>({
     region: "all",
     city: "all",
@@ -108,6 +113,12 @@ export function InventoryClientView({
     }
     return true;
   });
+
+  const matrixTotalPages = Math.ceil(filteredItems.length / pageSize) || 1;
+  const paginatedMatrixItems = filteredItems.slice((matrixPage - 1) * pageSize, matrixPage * pageSize);
+
+  const movementsTotalPages = Math.ceil(movements.length / pageSize) || 1;
+  const paginatedMovements = movements.slice((movementsPage - 1) * pageSize, movementsPage * pageSize);
 
   async function handleAdjustStock(e: React.FormEvent) {
     e.preventDefault();
@@ -184,18 +195,18 @@ export function InventoryClientView({
                 setMovements(d.data.recent_movements || []);
               }
             }}
-            className="gap-2 text-xs"
+            className="gap-2 text-xs cursor-pointer"
           >
             <RefreshCw className="size-3.5" /> Refresh
           </Button>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-xs">
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-xs cursor-pointer">
                 <Plus className="size-4" /> Adjust Stock
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md bg-white">
               <DialogHeader>
                 <DialogTitle>Stock Level Adjustment</DialogTitle>
                 <DialogDescription>
@@ -208,7 +219,7 @@ export function InventoryClientView({
                   <Label>Target Product SKU *</Label>
                   <Select value={selectedProductId} onValueChange={setSelectedProductId} required>
                     <SelectTrigger><SelectValue placeholder="Select Product" /></SelectTrigger>
-                    <SelectContent className="max-h-60">
+                    <SelectContent className="max-h-60 bg-white">
                       {items.map((i) => (
                         <SelectItem key={i._id} value={i._id}>
                           {i.product_name} ({i.sku}) - Stock: {i.current_stock}
@@ -226,7 +237,7 @@ export function InventoryClientView({
                       onValueChange={(val: any) => setAdjustmentType(val)}
                     >
                       <SelectTrigger><SelectValue placeholder="Action" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         <SelectItem value="receipt">Stock Intake / Receipt (+)</SelectItem>
                         <SelectItem value="adjustment_in">Correction Add (+)</SelectItem>
                         <SelectItem value="adjustment_out">Correction Deduct (-)</SelectItem>
@@ -258,9 +269,9 @@ export function InventoryClientView({
                   />
                 </div>
 
-                {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+                {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
 
-                <DialogFooter className="pt-2">
+                <DialogFooter className="pt-2 border-t">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
@@ -334,10 +345,10 @@ export function InventoryClientView({
       {/* Main Tabs (Live Matrix vs Audit Logs) */}
       <Tabs defaultValue="matrix" className="w-full space-y-4">
         <TabsList className="bg-slate-100 p-1">
-          <TabsTrigger value="matrix" className="gap-2 text-xs font-semibold">
+          <TabsTrigger value="matrix" className="gap-2 text-xs font-semibold cursor-pointer">
             <Boxes className="size-3.5" /> Stock Matrix ({filteredItems.length})
           </TabsTrigger>
-          <TabsTrigger value="movements" className="gap-2 text-xs font-semibold">
+          <TabsTrigger value="movements" className="gap-2 text-xs font-semibold cursor-pointer">
             <SlidersHorizontal className="size-3.5" /> Stock Movement Log ({movements.length})
           </TabsTrigger>
         </TabsList>
@@ -345,81 +356,94 @@ export function InventoryClientView({
         {/* TAB 1: LIVE MATRIX */}
         <TabsContent value="matrix" className="space-y-4">
           <GlobalGeoFilter
-            onFilterChange={setGeoFilters}
+            onFilterChange={(filters) => {
+              setGeoFilters(filters);
+              setMatrixPage(1);
+            }}
             placeholderSearch="Filter inventory by SKU, product code or name…"
           />
 
           <Card className="border-slate-200 shadow-xs">
-            <CardContent className="p-0">
+            <CardContent className="p-4 space-y-4">
               {filteredItems.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 text-sm">No inventory items match your search.</div>
               ) : (
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow>
-                      <TableHead>SKU & Code</TableHead>
-                      <TableHead>Product Name</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead>Current Stock</TableHead>
-                      <TableHead>Threshold</TableHead>
-                      <TableHead>Unit Cost</TableHead>
-                      <TableHead>Total Valuation</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredItems.map((item) => {
-                      return (
-                        <TableRow key={item._id} className="hover:bg-slate-50">
-                          <TableCell className="font-mono text-xs font-bold text-slate-900">
-                            {item.sku}
-                            <span className="block text-[10px] text-slate-500 font-normal">{item.product_code}</span>
-                          </TableCell>
-                          <TableCell className="font-semibold text-slate-900">{item.product_name}</TableCell>
-                          <TableCell className="text-xs text-slate-600">{item.unit_of_measure}</TableCell>
-                          <TableCell>
-                            <div className="font-bold text-slate-900 text-sm">{item.current_stock}</div>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600">
-                            Min: <span className="font-semibold">{item.minimum_stock}</span>
-                          </TableCell>
-                          <TableCell className="text-xs font-mono text-slate-700">Rs. {item.cost_price.toLocaleString()}</TableCell>
-                          <TableCell className="text-xs font-mono font-bold text-slate-900">
-                            Rs. {item.total_value.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            {item.status === "in_stock" && (
-                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                                In Stock
-                              </Badge>
-                            )}
-                            {item.status === "low_stock" && (
-                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                                Low Stock
-                              </Badge>
-                            )}
-                            {item.status === "out_of_stock" && (
-                              <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-xs">
-                                Out of Stock
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openAdjustmentFor(item._id)}
-                              className="h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                            >
-                              Adjust Stock
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <>
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead>SKU & Code</TableHead>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>Current Stock</TableHead>
+                        <TableHead>Threshold</TableHead>
+                        <TableHead>Unit Cost</TableHead>
+                        <TableHead>Total Valuation</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedMatrixItems.map((item) => {
+                        return (
+                          <TableRow key={item._id} className="hover:bg-slate-50">
+                            <TableCell className="font-mono text-xs font-bold text-slate-900">
+                              {item.sku}
+                              <span className="block text-[10px] text-slate-500 font-normal">{item.product_code}</span>
+                            </TableCell>
+                            <TableCell className="font-semibold text-slate-900">{item.product_name}</TableCell>
+                            <TableCell className="text-xs text-slate-600">{item.unit_of_measure}</TableCell>
+                            <TableCell>
+                              <div className="font-bold text-slate-900 text-sm font-mono">{item.current_stock}</div>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600">
+                              Min: <span className="font-semibold">{item.minimum_stock}</span>
+                            </TableCell>
+                            <TableCell className="text-xs font-mono text-slate-700">Rs. {item.cost_price.toLocaleString()}</TableCell>
+                            <TableCell className="text-xs font-mono font-bold text-slate-900">
+                              Rs. {item.total_value.toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {item.status === "in_stock" && (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                                  In Stock
+                                </Badge>
+                              )}
+                              {item.status === "low_stock" && (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                  Low Stock
+                                </Badge>
+                              )}
+                              {item.status === "out_of_stock" && (
+                                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-xs">
+                                  Out of Stock
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openAdjustmentFor(item._id)}
+                                className="h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50 cursor-pointer"
+                              >
+                                Adjust Stock
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+
+                  <PaginationControls
+                    currentPage={matrixPage}
+                    totalPages={matrixTotalPages}
+                    onPageChange={(p) => setMatrixPage(p)}
+                    totalItems={filteredItems.length}
+                    pageSize={pageSize}
+                  />
+                </>
               )}
             </CardContent>
           </Card>
@@ -432,50 +456,60 @@ export function InventoryClientView({
               <CardTitle className="text-base font-bold text-slate-900">Recent Stock Movements</CardTitle>
               <CardDescription className="text-xs">Audit log of stock receipts, transfers, and adjustments</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-4 space-y-4">
               {movements.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 text-sm">No stock movements recorded yet.</div>
               ) : (
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Product SKU</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Previous Stock</TableHead>
-                      <TableHead>New Stock</TableHead>
-                      <TableHead>Cost Value</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movements.map((m) => (
-                      <TableRow key={m._id} className="hover:bg-slate-50">
-                        <TableCell className="text-xs font-semibold capitalize text-slate-900">
-                          {m.movement_type.replace("_", " ")}
-                        </TableCell>
-                        <TableCell className="text-xs font-semibold text-slate-900">
-                          {m.product_id?.product_name || "Product"} ({m.product_id?.sku || "SKU"})
-                        </TableCell>
-                        <TableCell className="font-bold text-xs text-slate-900">
-                          {m.movement_type.includes("receipt") || m.movement_type.includes("in") ? (
-                            <span className="text-emerald-600 inline-flex items-center gap-0.5">
-                              <ArrowUpRight className="size-3" /> +{m.quantity}
-                            </span>
-                          ) : (
-                            <span className="text-rose-600 inline-flex items-center gap-0.5">
-                              <ArrowDownRight className="size-3" /> -{m.quantity}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">{m.previous_stock}</TableCell>
-                        <TableCell className="text-xs font-bold text-slate-900">{m.new_stock}</TableCell>
-                        <TableCell className="text-xs font-mono text-slate-600">
-                          Rs. {(m.total_cost || 0).toLocaleString()}
-                        </TableCell>
+                <>
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Product SKU</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Previous Stock</TableHead>
+                        <TableHead>New Stock</TableHead>
+                        <TableHead>Cost Value</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedMovements.map((m) => (
+                        <TableRow key={m._id} className="hover:bg-slate-50">
+                          <TableCell className="text-xs font-semibold capitalize text-slate-900">
+                            {m.movement_type.replace("_", " ")}
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-slate-900">
+                            {m.product_id?.product_name || "Product"} ({m.product_id?.sku || "SKU"})
+                          </TableCell>
+                          <TableCell className="font-bold text-xs text-slate-900 font-mono">
+                            {m.movement_type.includes("receipt") || m.movement_type.includes("in") ? (
+                              <span className="text-emerald-600 inline-flex items-center gap-0.5">
+                                <ArrowUpRight className="size-3" /> +{m.quantity}
+                              </span>
+                            ) : (
+                              <span className="text-rose-600 inline-flex items-center gap-0.5">
+                                <ArrowDownRight className="size-3" /> -{m.quantity}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs font-mono text-slate-600">{m.previous_stock}</TableCell>
+                          <TableCell className="text-xs font-bold font-mono text-slate-900">{m.new_stock}</TableCell>
+                          <TableCell className="text-xs font-mono text-slate-600">
+                            Rs. {(m.total_cost || 0).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <PaginationControls
+                    currentPage={movementsPage}
+                    totalPages={movementsTotalPages}
+                    onPageChange={(p) => setMovementsPage(p)}
+                    totalItems={movements.length}
+                    pageSize={pageSize}
+                  />
+                </>
               )}
             </CardContent>
           </Card>

@@ -1,78 +1,44 @@
-import { cookies } from "next/headers";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
-import { getServerApiBaseUrl } from "@/lib/api";
-
-async function getWarehouses() {
-  const cookieStore = await cookies();
-  const res = await fetch(`${getServerApiBaseUrl()}/api/warehouses`, {
-    headers: { Cookie: cookieStore.toString() },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to load warehouses");
-  return res.json() as Promise<{
-    data: Array<{
-      _id: string;
-      warehouse_code: string;
-      warehouse_name: string;
-      address?: { city: string; state: string };
-      contact?: { phone: string; manager_name: string };
-    }>;
-  }>;
-}
+import connectDB from "@/lib/db";
+import { Warehouse, Distributor, Product } from "@/lib/models";
+import { WarehousesClientView } from "./warehouses-client-view";
 
 export default async function WarehousesPage() {
-  const { data: list } = await getWarehouses();
+  await connectDB();
+
+  const [warehouses, distributors, products] = await Promise.all([
+    Warehouse.find({ is_active: true }).sort({ warehouse_name: 1 }).lean(),
+    Distributor.find({ is_active: true }).select("company_name distributor_code").lean(),
+    Product.find({ "status.is_active": true }).select("product_name product_code sku pricing inventory").lean(),
+  ]);
+
+  const serializedWarehouses = warehouses.map((w: any) => ({
+    _id: w._id.toString(),
+    warehouse_code: w.warehouse_code,
+    warehouse_name: w.warehouse_name,
+    distributor_id: w.distributor_id?.toString(),
+    address: w.address,
+    contact: w.contact,
+    capacity: w.capacity,
+  }));
+
+  const serializedDistributors = distributors.map((d: any) => ({
+    _id: d._id.toString(),
+    company_name: d.company_name,
+    distributor_code: d.distributor_code,
+  }));
+
+  const serializedProducts = products.map((p: any) => ({
+    _id: p._id.toString(),
+    product_name: p.product_name,
+    product_code: p.product_code,
+    sku: p.sku,
+  }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Warehouses</h1>
-          <CardDescription>Manage warehouses for inventory and delivery</CardDescription>
-        </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/warehouses/new">
-            <Plus className="size-4" />
-            Add warehouse
-          </Link>
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All warehouses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {list.length === 0 ? (
-            <p className="text-muted-foreground py-8 text-center">No warehouses yet. Add one to manage inventory.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Contact</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {list.map((w) => (
-                  <TableRow key={w._id}>
-                    <TableCell className="font-mono">{w.warehouse_code}</TableCell>
-                    <TableCell>{w.warehouse_name}</TableCell>
-                    <TableCell>{[w.address?.city, w.address?.state].filter(Boolean).join(", ") || "—"}</TableCell>
-                    <TableCell>{w.contact?.manager_name ?? w.contact?.phone ?? "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <WarehousesClientView
+      initialWarehouses={serializedWarehouses}
+      distributors={serializedDistributors}
+      products={serializedProducts}
+    />
   );
 }

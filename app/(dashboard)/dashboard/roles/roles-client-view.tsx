@@ -63,6 +63,7 @@ const MODULE_DEFINITIONS = [
   { key: "routes", label: "Sales Routes & Waypoints" },
   { key: "territories", label: "Territories & Boundaries" },
   { key: "inventory", label: "Stock & Warehousing" },
+  { key: "supply_chain", label: "Port Inbound & Bulk Repackaging" },
   { key: "distributors", label: "Distributors & Partners" },
   { key: "agents", label: "Field Agents & Fleet" },
   { key: "stores", label: "Retail Stores & Outlets" },

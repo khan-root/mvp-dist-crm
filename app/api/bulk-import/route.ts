@@ -268,6 +268,7 @@ export async function POST(request: Request) {
             territory_id: terr?._id,
             store_name: r.store_name,
             store_code: r.store_code,
+            owner_info: { name: r.owner_name || r.store_name, phone: r.phone, email: r.email },
             contact_person: { name: r.owner_name || r.store_name, phone: r.phone, email: r.email },
             address: { line1: r.line1, city: r.city, province: r.province, pincode: r.pincode, country: "Pakistan" },
             is_active: true,

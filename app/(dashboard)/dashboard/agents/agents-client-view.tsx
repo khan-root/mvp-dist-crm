@@ -9,6 +9,7 @@ import { Plus, ArrowRight } from "lucide-react";
 import { GlobalGeoFilter, GeoFilterState } from "@/components/global-geo-filter";
 import { matchesProvince } from "@/lib/data/citiesData";
 import { BulkImportDialog } from "@/components/bulk-import-dialog";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 interface AgentItem {
   _id: string;
@@ -20,6 +21,9 @@ interface AgentItem {
 }
 
 export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
   const [geoFilters, setGeoFilters] = useState<GeoFilterState>({
     region: "all",
     city: "all",
@@ -58,64 +62,80 @@ export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredAgents.length / pageSize) || 1;
+  const paginatedAgents = filteredAgents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="space-y-6 w-full">
       <GlobalGeoFilter
-        onFilterChange={setGeoFilters}
+        onFilterChange={(filters) => {
+          setGeoFilters(filters);
+          setCurrentPage(1);
+        }}
         placeholderSearch="Search agents by agent code, name, phone or email…"
       />
 
       <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
           <div>
             <CardTitle className="text-xl font-bold text-slate-900">Field Agents & Sales Fleet ({filteredAgents.length})</CardTitle>
             <CardDescription>Field booking representatives operating across assigned distributor territories.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <BulkImportDialog entityType="agents" onImportSuccess={() => window.location.reload()} />
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs">
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-xs cursor-pointer">
               <Link href="/dashboard/agents/new">
                 <Plus className="size-4" /> Add Agent
               </Link>
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="pt-4 space-y-4">
           {filteredAgents.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-sm">No agents match your filter criteria.</div>
           ) : (
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead>Agent Code</TableHead>
-                  <TableHead>Agent Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone Number</TableHead>
-                  <TableHead className="text-right">Profile</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAgents.map((a) => (
-                  <TableRow key={a._id} className="hover:bg-slate-50">
-                    <TableCell className="font-mono text-xs font-bold text-slate-900">{a.agent_code}</TableCell>
-                    <TableCell className="font-semibold text-slate-900">
-                      <Link href={`/dashboard/agents/${a._id}`} className="hover:text-emerald-600 hover:underline">
-                        {[a.first_name, a.last_name].filter(Boolean).join(" ")}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">{a.personal_info?.email || "N/A"}</TableCell>
-                    <TableCell className="text-xs font-mono text-slate-600">{a.personal_info?.phone || "N/A"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" asChild className="h-7 text-xs text-emerald-600 hover:text-emerald-700 gap-1">
-                        <Link href={`/dashboard/agents/${a._id}`}>
-                          View <ArrowRight className="size-3" />
-                        </Link>
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="font-semibold">Agent Code</TableHead>
+                    <TableHead className="font-semibold">Agent Name</TableHead>
+                    <TableHead className="font-semibold">Email</TableHead>
+                    <TableHead className="font-semibold">Phone Number</TableHead>
+                    <TableHead className="text-right font-semibold">Profile</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedAgents.map((a) => (
+                    <TableRow key={a._id} className="hover:bg-slate-50 transition-colors">
+                      <TableCell className="font-mono text-xs font-bold text-emerald-700">{a.agent_code}</TableCell>
+                      <TableCell className="font-semibold text-slate-900">
+                        <Link href={`/dashboard/agents/${a._id}`} className="hover:text-emerald-600 hover:underline cursor-pointer">
+                          {[a.first_name, a.last_name].filter(Boolean).join(" ")}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600">{a.personal_info?.email || "N/A"}</TableCell>
+                      <TableCell className="text-xs font-mono text-slate-600">{a.personal_info?.phone || "N/A"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" asChild className="h-7 text-xs text-emerald-600 hover:text-emerald-700 gap-1 cursor-pointer">
+                          <Link href={`/dashboard/agents/${a._id}`}>
+                            View <ArrowRight className="size-3" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+                totalItems={filteredAgents.length}
+                pageSize={pageSize}
+              />
+            </>
           )}
         </CardContent>
       </Card>
