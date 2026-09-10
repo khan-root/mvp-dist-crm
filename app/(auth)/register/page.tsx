@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
+
 export default function RegisterPage() {
   const router = useRouter();
   const [company_name, setCompanyName] = useState("");
@@ -41,13 +45,17 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Registration failed");
+        const msg = getApiErrorMessage(data, "Registration failed");
+        setError(msg);
+        toastApiError(toast, data, "Registration failed");
         return;
       }
+      toast.success("Company workspace created successfully!");
       router.push("/dashboard");
       router.refresh();
     } catch {
       setError("Network error");
+      toast.error("Network error");
     } finally {
       setLoading(false);
     }
@@ -112,8 +120,14 @@ export default function RegisterPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter className="flex flex-col gap-4 mt-6 pt-5 border-t border-slate-200">
-          <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 shadow-sm mt-2" disabled={loading}>
-            {loading ? "Creating account…" : "Register Company Workspace"}
+          <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 shadow-sm mt-2 cursor-pointer" disabled={loading}>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="size-4 animate-spin" /> Creating Account...
+              </span>
+            ) : (
+              "Register Company Workspace"
+            )}
           </Button>
           <p className="text-sm text-slate-500 text-center">
             Already have an account?{" "}

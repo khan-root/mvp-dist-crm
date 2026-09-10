@@ -19,7 +19,7 @@ const CreateSchema = z.object({
   owner_info: z.object({
     name: z.string().min(1),
     phone: z.string().min(1),
-    email: z.string().email().optional(),
+    email: z.string().email().or(z.literal("")).optional(),
     alternate_phone: z.string().optional(),
   }),
   address: z.object({
@@ -62,6 +62,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const distributorId = searchParams.get("distributor_id");
     const agentId = searchParams.get("agent_id");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
+
     await dbConnect();
 
     // Touch SalesRoute to ensure model is registered in Mongoose
@@ -73,12 +77,24 @@ export async function GET(request: Request) {
     if (distributorId) filter.distributor_id = distributorId;
     if (agentId) filter.assigned_agent_id = agentId;
 
-    const list = await Store.find(filter)
-      .sort({ created_at: -1 })
-      .populate("assigned_agent_id", "agent_code first_name last_name personal_info")
-      .populate("assigned_route_id", "route_code route_name")
-      .lean();
-    return NextResponse.json({ data: list });
+    const [list, total] = await Promise.all([
+      Store.find(filter)
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("assigned_agent_id", "agent_code first_name last_name personal_info")
+        .populate("assigned_route_id", "route_code route_name")
+        .lean(),
+      Store.countDocuments(filter),
+    ]);
+
+    return NextResponse.json({
+      data: list,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (e) {
     console.error("GET /api/stores error:", e);
     return NextResponse.json({ error: "Failed to list stores", details: String(e) }, { status: 500 });

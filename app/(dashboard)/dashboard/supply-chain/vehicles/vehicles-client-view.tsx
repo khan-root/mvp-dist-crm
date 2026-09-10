@@ -19,10 +19,16 @@ interface VehiclesClientViewProps {
   currentUser: any;
 }
 
+const ensureArray = <T = any,>(data: any): T[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
 const PAGE_SIZE = 10;
 
 export function VehiclesClientView({ initialVehicles, warehouses, currentUser }: VehiclesClientViewProps) {
-  const [vehicles, setVehicles] = useState(initialVehicles);
+  const [vehicles, setVehicles] = useState<any[]>(() => ensureArray(initialVehicles));
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -44,7 +50,9 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
   const isWarehouseUser = currentUser?.role_id?.code === "warehouse_manager" || currentUser?.role_id?.code === "warehouse_operator";
   const userWarehouseId = currentUser?.assigned_warehouse_id?._id || currentUser?.assigned_warehouse_id;
 
-  const filteredVehicles = vehicles.filter((veh) => {
+  const safeVehicles = ensureArray(vehicles);
+
+  const filteredVehicles = safeVehicles.filter((veh) => {
     if (isWarehouseUser && userWarehouseId) {
       if (veh.warehouse_id?._id !== userWarehouseId) return false;
     }
@@ -71,7 +79,7 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
       const res = await fetch("/api/supply-chain/vehicles");
       if (res.ok) {
         const data = await res.json();
-        setVehicles(data);
+        setVehicles(ensureArray(data));
       }
     } catch (e) {
       console.error(e);
@@ -93,13 +101,10 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
           vehicle_number: vehicleNumber,
           vehicle_type: vehicleType,
           transporter_company: transporterCompany,
-          capacity_tons: Number(capacityTons) || 0,
-          driver: {
-            name: driverName,
-            phone: driverPhone,
-            license_number: driverLicense,
-          },
-          warehouse_id: warehouseId || (isWarehouseUser ? userWarehouseId : undefined),
+          capacity_tons: capacityTons ? Number(capacityTons) : 20,
+          driver_name: driverName || "Assigned Driver",
+          driver_phone: driverPhone || "N/A",
+          warehouse_id: isWarehouseUser ? userWarehouseId : (warehouseId && warehouseId !== "unassigned" ? warehouseId : undefined),
         }),
       });
 
@@ -124,9 +129,9 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
     }
   };
 
-  const totalCapacity = vehicles.reduce((sum, v) => sum + (v.capacity_tons || 0), 0);
-  const activeCount = vehicles.filter((v) => v.status === "active").length;
-  const inTransitCount = vehicles.filter((v) => v.status === "in_transit").length;
+  const totalCapacity = safeVehicles.reduce((sum, v) => sum + (v.capacity_tons || 0), 0);
+  const activeCount = safeVehicles.filter((v) => v.status === "active").length;
+  const inTransitCount = safeVehicles.filter((v) => v.status === "in_transit").length;
 
   return (
     <div className="space-y-6">
@@ -182,8 +187,8 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
       </div>
 
       {/* Filter Toolbar */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="shadow-xs border-slate-200/90 dark:border-slate-800">
+        <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -443,12 +448,12 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
                       <SelectValue placeholder="Select home warehouse (Optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Facilities (Global Fleet Pool)</SelectItem>
-                      {warehouses.map((w) => (
+                      <SelectItem value="unassigned">Global Fleet Pool (Unassigned)</SelectItem>
+                      {warehouses.map((w) => w._id ? (
                         <SelectItem key={w._id} value={w._id}>
                           {w.warehouse_name} ({w.warehouse_code})
                         </SelectItem>
-                      ))}
+                      ) : null)}
                     </SelectContent>
                   </Select>
                 </div>

@@ -34,6 +34,7 @@ import {
   Ship,
   Boxes,
   Truck,
+  Pencil,
 } from "lucide-react";
 import { PermissionGuard } from "@/components/permission-guard";
 
@@ -64,7 +65,7 @@ interface UserData {
   name: string;
   email: string;
   phone?: string;
-  role_id?: { name: string; code: string };
+  role_id?: { _id?: string; name: string; code: string };
   assigned_facility?: string;
   assigned_warehouse_id?: { _id: string; warehouse_name: string; warehouse_code: string };
   status: string;
@@ -87,6 +88,9 @@ const MODULE_DEFINITIONS = [
 
 const ACTIONS = ["read", "write", "update", "delete"];
 
+import { useEffect } from "react";
+import { useStore } from "@/lib/store/useStore";
+
 export function RolesClientView({
   initialRoles,
   initialUsers,
@@ -96,10 +100,21 @@ export function RolesClientView({
   initialUsers: UserData[];
   initialWarehouses?: WarehouseData[];
 }) {
-  const [roles, setRoles] = useState<RoleData[]>(initialRoles);
-  const [users, setUsers] = useState<UserData[]>(initialUsers);
+  const roles = useStore((state) => state.roles);
+  const users = useStore((state) => state.users);
+  const setStoreRoles = useStore((state) => state.setRoles);
+  const addRoleToStore = useStore((state) => state.addRole);
+  const setStoreUsers = useStore((state) => state.setUsers);
+  const addUserToStore = useStore((state) => state.addUser);
+  const updateUserInStore = useStore((state) => state.updateUser);
+
   const [warehouses] = useState<WarehouseData[]>(initialWarehouses);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    setStoreRoles(initialRoles);
+    setStoreUsers(initialUsers);
+  }, [initialRoles, initialUsers, setStoreRoles, setStoreUsers]);
 
   // Role Modal state
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -199,10 +214,12 @@ export function RolesClientView({
       setRoleDesc("");
       setFeedback({ type: "success", text: `Role "${d.data.name}" created successfully!` });
 
+      if (d.data) addRoleToStore(d.data);
+
       // Refresh roles
       const refRes = await fetch("/api/roles", { credentials: "include" });
       const refData = await refRes.json();
-      if (refData.data) setRoles(refData.data);
+      if (refData.data) setStoreRoles(refData.data);
     } catch {
       setFeedback({ type: "error", text: "Network error creating role" });
     } finally {
@@ -252,14 +269,87 @@ export function RolesClientView({
       setUserWarehouseId("all");
       setFeedback({ type: "success", text: `Manager user "${d.data.name}" onboarded successfully!` });
 
+      if (d.data) addUserToStore(d.data);
+
       // Refresh users
       const refRes = await fetch("/api/users", { credentials: "include" });
       const refData = await refRes.json();
-      if (refData.data) setUsers(refData.data);
+      if (refData.data) setStoreUsers(refData.data);
     } catch {
       setFeedback({ type: "error", text: "Network error onboarding manager" });
     } finally {
       setCreatingUser(false);
+    }
+  }
+
+  // Edit User Modal state
+  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editRoleId, setEditRoleId] = useState("");
+  const [editWarehouseId, setEditWarehouseId] = useState("all");
+  const [editStatus, setEditStatus] = useState("active");
+  const [updatingUser, setUpdatingUser] = useState(false);
+
+  function openEditUserModal(user: UserData) {
+    setEditingUserId(user._id);
+    setEditName(user.name || "");
+    setEditPhone(user.phone || "");
+    setEditRoleId(user.role_id?._id || (typeof user.role_id === "object" && (user.role_id as any)._id) || "");
+    setEditWarehouseId(user.assigned_warehouse_id?._id || "all");
+    setEditStatus(user.status || "active");
+    setEditUserModalOpen(true);
+  }
+
+  async function handleUpdateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUserId) return;
+
+    setUpdatingUser(true);
+    setFeedback(null);
+
+    const selectedWh = warehouses.find((w) => w._id === editWarehouseId);
+    const assignedFacilityName = editWarehouseId === "all" || !selectedWh
+      ? "All Warehouses & Facilities (Global Scope)"
+      : selectedWh.warehouse_name;
+
+    try {
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: editingUserId,
+          name: editName.trim(),
+          phone: editPhone.trim() || undefined,
+          role_id: editRoleId || undefined,
+          assigned_facility: assignedFacilityName,
+          assigned_warehouse_id: editWarehouseId !== "all" ? editWarehouseId : null,
+          status: editStatus,
+        }),
+      });
+
+      const d = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: "error", text: d.error || "Failed to update employee account" });
+        return;
+      }
+
+      setEditUserModalOpen(false);
+      setEditingUserId(null);
+      setFeedback({ type: "success", text: `Employee account "${d.data.name}" updated successfully!` });
+
+      if (d.data) updateUserInStore(d.data);
+
+      // Refresh users
+      const refRes = await fetch("/api/users", { credentials: "include" });
+      const refData = await refRes.json();
+      if (refData.data) setStoreUsers(refData.data);
+    } catch {
+      setFeedback({ type: "error", text: "Network error updating manager account" });
+    } finally {
+      setUpdatingUser(false);
     }
   }
 
@@ -394,7 +484,7 @@ export function RolesClientView({
                   <UserPlus className="size-4 text-emerald-400" /> Onboard Manager Account
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 font-bold text-xl">
                     <UserPlus className="w-5 h-5 text-emerald-600" />
@@ -429,8 +519,8 @@ export function RolesClientView({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2 min-w-0">
                       <Label htmlFor="user_phone">Mobile Phone</Label>
                       <Input
                         id="user_phone"
@@ -440,7 +530,7 @@ export function RolesClientView({
                         onChange={(e) => setUserPhone(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 min-w-0">
                       <Label htmlFor="user_password">Login Password *</Label>
                       <Input
                         id="user_password"
@@ -586,7 +676,8 @@ export function RolesClientView({
                         <TableHead>Email & Phone</TableHead>
                         <TableHead>Assigned Role</TableHead>
                         <TableHead>Assigned Warehouse Facility Scope</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -607,10 +698,23 @@ export function RolesClientView({
                               {u.assigned_warehouse_id?.warehouse_name || u.assigned_facility || "All Facilities (Global)"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs capitalize">
+                          <TableCell>
+                            <Badge variant="outline" className={`text-xs capitalize ${
+                              u.status === "active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
                               {u.status || "active"}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2.5 text-xs gap-1 border-slate-300 hover:bg-slate-100"
+                              onClick={() => openEditUserModal(u)}
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-slate-600" />
+                              Edit Role
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -621,6 +725,102 @@ export function RolesClientView({
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Manager Account & Role Dialog */}
+        <Dialog open={editUserModalOpen} onOpenChange={setEditUserModalOpen}>
+          <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 font-bold text-xl">
+                <Pencil className="w-5 h-5 text-emerald-600" />
+                Edit Manager Account & Role Scope
+              </DialogTitle>
+              <DialogDescription>
+                Update role authorization, assigned facility scope, or account status for this employee.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleUpdateUser} className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit_user_name">Full Name *</Label>
+                <Input
+                  id="edit_user_name"
+                  placeholder="Full Name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 min-w-0">
+                  <Label htmlFor="edit_user_phone">Mobile Phone</Label>
+                  <Input
+                    id="edit_user_phone"
+                    type="tel"
+                    placeholder="0300 1234567"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 min-w-0">
+                  <Label htmlFor="edit_user_status">Account Status *</Label>
+                  <Select value={editStatus} onValueChange={setEditStatus} required>
+                    <SelectTrigger id="edit_user_status"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assigned Role & Authority *</Label>
+                <Select value={editRoleId} onValueChange={setEditRoleId} required>
+                  <SelectTrigger><SelectValue placeholder="Select Role" /></SelectTrigger>
+                  <SelectContent>
+                    {roles.map((r) => (
+                      <SelectItem key={r._id} value={r._id}>
+                        {r.name} ({r.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 border-t pt-3">
+                <Label className="font-bold text-xs flex items-center gap-1">
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  Assigned Facility / Warehouse Scope *
+                </Label>
+                <Select value={editWarehouseId} onValueChange={setEditWarehouseId} required>
+                  <SelectTrigger><SelectValue placeholder="Select Facility Scope" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Facilities & Ports (Global Scope)</SelectItem>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w._id} value={w._id}>
+                        {w.warehouse_name} ({w.warehouse_code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Restricts this user's view, inventory dispatches, and bilties strictly to the selected warehouse hub.
+                </p>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditUserModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updatingUser} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                  {updatingUser ? "Saving Changes…" : "Update Account"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </PermissionGuard>
   );

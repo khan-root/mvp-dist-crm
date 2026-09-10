@@ -19,8 +19,14 @@ interface AuditClientViewProps {
 
 const PAGE_SIZE = 12;
 
+const ensureArray = <T = any,>(data: any): T[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
 export function AuditClientView({ initialMovements, warehouses, products, currentUser }: AuditClientViewProps) {
-  const [movements, setMovements] = useState(initialMovements);
+  const [movements, setMovements] = useState<any[]>(() => ensureArray(initialMovements));
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
@@ -30,7 +36,9 @@ export function AuditClientView({ initialMovements, warehouses, products, curren
   const isWarehouseUser = currentUser?.role_id?.code === "warehouse_manager" || currentUser?.role_id?.code === "warehouse_operator";
   const userWarehouseId = currentUser?.assigned_warehouse_id?._id || currentUser?.assigned_warehouse_id;
 
-  const filteredMovements = movements.filter((mov) => {
+  const safeMovements = ensureArray(movements);
+
+  const filteredMovements = safeMovements.filter((mov) => {
     if (isWarehouseUser && userWarehouseId) {
       const fromId = mov.from_warehouse?._id || mov.from_warehouse;
       const toId = mov.to_warehouse?._id || mov.to_warehouse;
@@ -66,7 +74,7 @@ export function AuditClientView({ initialMovements, warehouses, products, curren
       const res = await fetch("/api/supply-chain/audit");
       if (res.ok) {
         const data = await res.json();
-        setMovements(data);
+        setMovements(ensureArray(data));
       }
     } catch (e) {
       console.error(e);
@@ -78,7 +86,7 @@ export function AuditClientView({ initialMovements, warehouses, products, curren
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="rounded-xl border bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-950 p-4 sm:p-6 text-white shadow-xl">
+      <div className="rounded-xl border border-slate-800 bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-950 p-4 sm:p-6 text-white shadow-md">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-700/50 px-3 py-1 text-xs font-semibold text-slate-300 backdrop-blur-md">
@@ -106,32 +114,32 @@ export function AuditClientView({ initialMovements, warehouses, products, curren
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-800/80 pt-5">
           <div className="rounded-lg bg-slate-800/40 p-3 backdrop-blur-sm">
             <div className="text-xs text-slate-400">Total Audited Events</div>
-            <div className="text-xl font-bold text-white">{movements.length} Events</div>
+            <div className="text-xl font-bold text-white">{safeMovements.length} Events</div>
           </div>
           <div className="rounded-lg bg-slate-800/40 p-3 backdrop-blur-sm">
             <div className="text-xs text-slate-400">Inbound Arrivals</div>
             <div className="text-xl font-bold text-emerald-400">
-              {movements.filter((m) => m.movement_type === "inbound_port" || m.movement_type === "inbound_cargo" || m.movement_type === "purchase_receive").length} Events
+              {safeMovements.filter((m) => m.movement_type === "inbound_port" || m.movement_type === "inbound_cargo" || m.movement_type === "purchase_receive").length} Events
             </div>
           </div>
           <div className="rounded-lg bg-slate-800/40 p-3 backdrop-blur-sm">
             <div className="text-xs text-slate-400">Bilty Sales Dispatches</div>
             <div className="text-xl font-bold text-rose-400">
-              {movements.filter((m) => m.movement_type === "outbound_sale" || m.movement_type === "bilty_dispatch").length} Events
+              {safeMovements.filter((m) => m.movement_type === "outbound_sale" || m.movement_type === "bilty_dispatch").length} Events
             </div>
           </div>
           <div className="rounded-lg bg-slate-800/40 p-3 backdrop-blur-sm">
             <div className="text-xs text-slate-400">Repackaging Conversions</div>
             <div className="text-xl font-bold text-purple-400">
-              {movements.filter((m) => m.movement_type === "repackaging_out" || m.movement_type === "repackaging_in").length} Events
+              {safeMovements.filter((m) => m.movement_type === "repackaging_out" || m.movement_type === "repackaging_in").length} Events
             </div>
           </div>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="shadow-xs border-slate-200/90 dark:border-slate-800">
+        <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -236,18 +244,34 @@ export function AuditClientView({ initialMovements, warehouses, products, curren
                     return (
                       <TableRow key={mov._id} className="hover:bg-muted/40 text-xs">
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              mov.movement_type.includes("inbound") || mov.movement_type.includes("in")
-                                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400 font-semibold"
-                                : mov.movement_type.includes("outbound") || mov.movement_type.includes("out")
-                                ? "bg-rose-500/10 text-rose-700 border-rose-500/30 dark:text-rose-400 font-semibold"
-                                : "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400 font-semibold"
-                            }
-                          >
-                            {mov.movement_type}
-                          </Badge>
+                          {(() => {
+                            const type = mov.movement_type;
+                            let sapMvt = "MvT 311";
+                            if (type === "inbound") sapMvt = "MvT 101 (GRN)";
+                            else if (type === "repackage") sapMvt = "MvT 261/309 (Yield)";
+                            else if (type === "transfer_out") sapMvt = "MvT 351 (STO Dispatch)";
+                            else if (type === "transfer_in") sapMvt = "MvT 101 (STO Receipt)";
+                            else if (type === "outbound") sapMvt = "MvT 601 (Goods Issue)";
+                            else if (type === "adjustment") sapMvt = "MvT 701/702 (Phys Inv)";
+
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    type.includes("inbound") || type.includes("in")
+                                      ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400 font-semibold text-[10px]"
+                                      : type.includes("outbound") || type.includes("out")
+                                      ? "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400 font-semibold text-[10px]"
+                                      : "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400 font-semibold text-[10px]"
+                                  }
+                                >
+                                  {sapMvt}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground font-mono">{type}</span>
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <div className="font-bold text-slate-900 dark:text-slate-100">

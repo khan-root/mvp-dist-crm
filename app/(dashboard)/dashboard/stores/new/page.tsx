@@ -12,6 +12,9 @@ import { RouteLeafletMap, StorePoint } from "@/components/route-leaflet-map";
 import { StoreLocationPickerMap } from "@/components/store-location-picker-map";
 import { MapPin, Store as StoreIcon } from "lucide-react";
 
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
+
 export default function NewStorePage() {
   const router = useRouter();
   const [distributors, setDistributors] = useState<Array<{ _id: string; company_name: string }>>([]);
@@ -90,13 +93,17 @@ export default function NewStorePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create");
+        const msg = getApiErrorMessage(data, "Failed to create store");
+        setError(msg);
+        toastApiError(toast, data, "Failed to create store");
         return;
       }
+      toast.success("Store created successfully!");
       router.push("/dashboard/stores");
       router.refresh();
     } catch {
       setError("Network error");
+      toast.error("Network error");
     } finally {
       setLoading(false);
     }

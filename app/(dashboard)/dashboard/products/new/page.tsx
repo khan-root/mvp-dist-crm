@@ -18,6 +18,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toastApiError } from "@/lib/utils";
+import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import {
   Package,
   ArrowLeft,
@@ -38,9 +40,12 @@ import {
   Cpu,
   Pill,
   ShoppingBag,
+  Loader2,
+  Sprout,
 } from "lucide-react";
 
 const DOMAIN_OPTIONS = [
+  { id: "agriculture", label: "Agriculture & Fertilizers", icon: Sprout, desc: "Fertilizers, Agro-Chemicals, Pesticides, Seeds & Bulk Crops" },
   { id: "general", label: "General Retail / Wholesale", icon: Package, desc: "Universal products, general merchandise, items" },
   { id: "fmcg", label: "FMCG & Grocery", icon: ShoppingBag, desc: "Fast-moving packaged goods, groceries, batch & expiry" },
   { id: "pharma", label: "Pharmaceuticals & Healthcare", icon: Pill, desc: "Medicines, Rx drugs, medical supplies" },
@@ -48,6 +53,8 @@ const DOMAIN_OPTIONS = [
   { id: "construction", label: "Hardware & Construction", icon: Wrench, desc: "Building materials, tools, dimensions & materials" },
   { id: "apparel", label: "Apparel & Fashion", icon: Shirt, desc: "Clothing, footwear, size & color variants" },
   { id: "food_beverage", label: "Food & Beverage", icon: Package, desc: "Dairy, beverages, perishable foods" },
+  { id: "auto_parts", label: "Auto Spare Parts & Lubricants", icon: Wrench, desc: "Engine oils, filters, spare parts, vehicle models" },
+  { id: "cosmetics", label: "Cosmetics & Personal Care", icon: Sparkles, desc: "Skincare, haircare, beauty products" },
 ];
 
 const UOM_OPTIONS = [
@@ -224,7 +231,9 @@ export default function NewProductPage() {
     setLoading(true);
 
     if (!distributor_id || !category_id || !brand_id) {
-      setError("Please select Distributor, Category, and Brand.");
+      const msg = "Please select Distributor, Category, and Brand.";
+      toastApiError(msg);
+      setError(msg);
       setLoading(false);
       return;
     }
@@ -287,35 +296,43 @@ export default function NewProductPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to create product");
         setError(data.error || "Failed to create product");
         return;
       }
       router.push("/dashboard/products");
       router.refresh();
-    } catch {
+    } catch (err: any) {
+      toastApiError(err, "Network error while creating product");
       setError("Network error while creating product");
     } finally {
       setLoading(false);
     }
   }
 
+  const currentDomainObj = DOMAIN_OPTIONS.find((d) => d.id === industry_domain) || DOMAIN_OPTIONS[0];
+  const DomainIcon = currentDomainObj.icon;
+
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 pt-2">
       {/* Top Header */}
-      <div className="flex items-center justify-between gap-4">
-        <Button variant="ghost" size="sm" asChild className="text-slate-600 hover:text-slate-900">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Button variant="ghost" size="sm" asChild className="text-slate-600 hover:text-slate-900 w-fit">
           <Link href="/dashboard/products">
             <ArrowLeft className="size-4 mr-1.5" /> Back to Products Catalog
           </Link>
         </Button>
-        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 px-3 py-1">
-          <Sparkles className="size-3.5" />
-          <span>Universal Domain Engine Active</span>
-        </Badge>
+        <div className="flex flex-wrap items-center gap-3">
+          <BulkImportDialog entityType="products" buttonText="Bulk Import Products / Fertilizers" onImportSuccess={() => router.push("/dashboard/products")} />
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 px-3 py-1.5">
+            <Sparkles className="size-3.5" />
+            <span>Universal Domain Engine Active</span>
+          </Badge>
+        </div>
       </div>
 
-      <Card className="border-slate-200 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-t-xl">
+      <Card className="border-slate-200 shadow-md rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-none m-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               <Package className="size-6" />
@@ -323,7 +340,7 @@ export default function NewProductPage() {
             <div>
               <CardTitle className="text-xl font-bold text-white">Universal Product Onboarding</CardTitle>
               <CardDescription className="text-slate-300 text-xs">
-                Add products for any industry domain (FMCG, Pharma, Electronics, Hardware, Apparel, Wholesale) with domain attributes.
+                Add single or bulk products for any industry domain (Agriculture & Fertilizers, FMCG, Pharma, Electronics, Hardware, Apparel, Wholesale) with domain attributes.
               </CardDescription>
             </div>
           </div>
@@ -338,32 +355,38 @@ export default function NewProductPage() {
             )}
 
             {/* STEP 1: Select Industry Domain */}
-            <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                1. Select Industry Domain / Product Category Preset
+            <div className="space-y-3 border-b pb-5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                1. Select Industry Domain / Product Category Preset *
               </Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
-                {DOMAIN_OPTIONS.map((d) => {
-                  const isSelected = industry_domain === d.id;
-                  const IconComp = d.icon;
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setIndustryDomain(d.id)}
-                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                        isSelected
-                          ? "border-emerald-600 bg-emerald-50/80 text-emerald-900 shadow-xs ring-1 ring-emerald-600"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      <IconComp className={`size-5 mb-2 ${isSelected ? "text-emerald-600" : "text-slate-500"}`} />
-                      <div>
-                        <p className="font-bold text-xs leading-tight">{d.label}</p>
-                      </div>
-                    </button>
-                  );
-                })}
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <Select value={industry_domain} onValueChange={setIndustryDomain} required>
+                  <SelectTrigger className="bg-white border-slate-300 h-10 px-3.5 rounded-xl font-semibold text-slate-900 w-full sm:w-80 shadow-xs hover:border-slate-400">
+                    <SelectValue placeholder="Select Industry Domain" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {DOMAIN_OPTIONS.map((d) => {
+                      const IconComp = d.icon;
+                      return (
+                        <SelectItem key={d.id} value={d.id} className="py-2 cursor-pointer">
+                          <div className="flex items-center gap-2">
+                            <IconComp className="size-4 text-emerald-600 shrink-0" />
+                            <span className="font-semibold text-slate-900">{d.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {currentDomainObj && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 flex-1 min-w-0">
+                    <DomainIcon className="size-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold text-slate-900">{currentDomainObj.label}:</span>
+                    <span className="text-slate-500 truncate">{currentDomainObj.desc}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -851,7 +874,14 @@ export default function NewProductPage() {
               <Link href="/dashboard/products">Cancel</Link>
             </Button>
             <Button type="submit" disabled={loading} className="bg-slate-900 hover:bg-slate-800 text-white min-w-[160px]">
-              {loading ? "Creating Product…" : "Save & Add Product"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Product…
+                </>
+              ) : (
+                "Save & Add Product"
+              )}
             </Button>
           </CardFooter>
         </form>

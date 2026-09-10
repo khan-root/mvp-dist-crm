@@ -13,6 +13,9 @@ import { matchesProvince } from "@/lib/data/citiesData";
 import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
+import { toast } from "sonner";
+import { toastApiError } from "@/lib/utils";
+
 export interface ProductItem {
   _id: string;
   product_code: string;
@@ -28,7 +31,15 @@ export interface ProductItem {
   domain_attributes?: { batch_number?: string; expiry_date?: string; rx_required?: boolean; warranty_months?: number };
 }
 
-export function ProductsClientView({ products = [] }: { products: ProductItem[] }) {
+export function ProductsClientView({
+  initialProducts = [],
+  initialTotalRecords = 0,
+}: {
+  initialProducts?: ProductItem[];
+  initialTotalRecords?: number;
+}) {
+  const [products, setProducts] = useState<ProductItem[]>(initialProducts);
+  const [totalRecords, setTotalRecords] = useState<number>(initialTotalRecords || initialProducts.length);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -43,6 +54,26 @@ export function ProductsClientView({ products = [] }: { products: ProductItem[] 
     distributorId: "all",
     search: "",
   });
+
+  const fetchPage = async (page: number) => {
+    try {
+      const res = await fetch(`/api/products?page=${page}&limit=${pageSize}`);
+      const data = await res.json();
+      if (res.ok) {
+        setProducts(data.data || []);
+        if (typeof data.total === "number") setTotalRecords(data.total);
+      } else {
+        toastApiError(toast, data, "Failed to load products");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to fetch page");
+    }
+  };
+
+  const handlePageChange = (p: number) => {
+    setCurrentPage(p);
+    fetchPage(p);
+  };
 
   const filteredProducts = products.filter((p) => {
     if (geoFilters.search) {
@@ -74,8 +105,7 @@ export function ProductsClientView({ products = [] }: { products: ProductItem[] 
     return true;
   });
 
-  const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
   // High-level KPI metrics (Shopify / QuickBooks Commerce style)
   const totalCatalogSKUs = products.length;
@@ -192,7 +222,7 @@ export function ProductsClientView({ products = [] }: { products: ProductItem[] 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedProducts.map((p) => {
+                  {filteredProducts.map((p) => {
                     const cost = p.pricing?.base_cost || 0;
                     const mrp = p.pricing?.mrp || 0;
                     const margin = mrp > 0 ? (((mrp - cost) / mrp) * 100).toFixed(1) : "0.0";
@@ -265,8 +295,8 @@ export function ProductsClientView({ products = [] }: { products: ProductItem[] 
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page)}
-                totalItems={filteredProducts.length}
+                onPageChange={handlePageChange}
+                totalRecords={totalRecords}
                 pageSize={pageSize}
               />
             </>

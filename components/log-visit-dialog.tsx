@@ -16,7 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, CheckCircle2, ShieldCheck, AlertTriangle, Navigation, Crosshair } from "lucide-react";
+import { MapPin, CheckCircle2, ShieldCheck, AlertTriangle, Navigation, Crosshair, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { toastApiError } from "@/lib/utils";
 
 interface AssignedStore {
   _id: string;
@@ -299,9 +301,15 @@ export function LogVisitDialog({
             {error && <p className="text-sm text-rose-600 font-medium">{error}</p>}
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
               <Button type="submit" disabled={loading} className="bg-slate-900 hover:bg-slate-800 text-white font-semibold cursor-pointer">
-                {loading ? "Recording Check-in…" : "Log Visit Check-in"}
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" /> Recording Check-in...
+                  </span>
+                ) : (
+                  "Log Visit Check-in"
+                )}
               </Button>
             </DialogFooter>
           </form>

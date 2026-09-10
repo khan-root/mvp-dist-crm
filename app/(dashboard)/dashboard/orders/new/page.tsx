@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { toastApiError } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+
 interface Product {
   _id: string;
   product_name: string;
@@ -85,11 +88,15 @@ export default function NewOrderPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) {
-      setError("Add at least one item");
+      const msg = "Add at least one item";
+      toastApiError(msg);
+      setError(msg);
       return;
     }
     if (!store_id || !distributor_id) {
-      setError("Select distributor and store");
+      const msg = "Select distributor and store";
+      toastApiError(msg);
+      setError(msg);
       return;
     }
     setError("");
@@ -122,13 +129,15 @@ export default function NewOrderPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to create order");
         setError(data.error || "Failed to create order");
         return;
       }
       router.push("/dashboard/orders");
       router.refresh();
-    } catch {
-      setError("Network error");
+    } catch (err: any) {
+      toastApiError(err, "Network error occurred");
+      setError("Network error occurred");
     } finally {
       setLoading(false);
     }
@@ -273,8 +282,17 @@ export default function NewOrderPage() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={loading || items.length === 0}>{loading ? "Creating…" : "Create order"}</Button>
+          <CardFooter className="flex justify-between">
+            <Button type="submit" disabled={loading || items.length === 0}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create order"
+              )}
+            </Button>
             <Button type="button" variant="outline" asChild>
               <Link href="/dashboard/orders">Cancel</Link>
             </Button>

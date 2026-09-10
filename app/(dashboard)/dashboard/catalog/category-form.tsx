@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
+
 const DOMAINS = [
   { value: "fmcg", label: "FMCG / Packaged Consumer Goods" },
   { value: "pharma", label: "Pharmaceuticals & Healthcare" },
@@ -28,6 +32,8 @@ const DOMAINS = [
   { value: "general", label: "General Multi-Domain" },
 ];
 
+import { useStore } from "@/lib/store/useStore";
+
 export function CategoryForm({
   distributors,
   trigger,
@@ -36,6 +42,8 @@ export function CategoryForm({
   trigger: React.ReactNode;
 }) {
   const router = useRouter();
+  const addCategoryToStore = useStore((state) => state.addCategory);
+
   const [open, setOpen] = useState(false);
   const [distributor_id, setDistributorId] = useState("");
   const [category_name, setCategoryName] = useState("");
@@ -68,9 +76,15 @@ export function CategoryForm({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create category");
+        const msg = getApiErrorMessage(data, "Failed to create category");
+        setError(msg);
+        toastApiError(toast, data, "Failed to create category");
         return;
       }
+      if (data.data) {
+        addCategoryToStore(data.data);
+      }
+      toast.success("Category saved successfully");
       setOpen(false);
       setCategoryName("");
       setCategoryCode("");
@@ -79,6 +93,7 @@ export function CategoryForm({
       router.refresh();
     } catch {
       setError("Network error");
+      toast.error("Network error");
     } finally {
       setLoading(false);
     }
@@ -87,7 +102,7 @@ export function CategoryForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Add Category</DialogTitle>
           <DialogDescription>Create a multi-domain category with default GST tax & margin presets</DialogDescription>
@@ -105,8 +120,8 @@ export function CategoryForm({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="category_name">Category Name *</Label>
               <Input
                 id="category_name"
@@ -116,7 +131,7 @@ export function CategoryForm({
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="category_code">Category Code *</Label>
               <Input
                 id="category_code"
@@ -140,8 +155,8 @@ export function CategoryForm({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="default_gst_rate">Default GST Tax %</Label>
               <Input
                 id="default_gst_rate"
@@ -151,7 +166,7 @@ export function CategoryForm({
                 onChange={(e) => setDefaultGstRate(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="default_margin">Trade Margin %</Label>
               <Input
                 id="default_margin"
@@ -175,8 +190,16 @@ export function CategoryForm({
 
           {error && <p className="text-sm text-destructive font-medium">{error}</p>}
           <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Saving…" : "Save Category"}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
+            <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="size-4 animate-spin" /> Saving...
+                </span>
+              ) : (
+                "Save Category"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

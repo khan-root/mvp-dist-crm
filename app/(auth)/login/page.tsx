@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Mail, Building, ArrowRight, ShieldCheck } from "lucide-react";
+import { Lock, Mail, Building, ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,9 +32,12 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        const msg = getApiErrorMessage(data, "Login failed");
+        setError(msg);
+        toastApiError(toast, data, "Login failed");
         return;
       }
+      toast.success("Login successful!");
       const userType = data.user?.user_type || "admin";
       if (userType === "agent") router.push("/agent");
       else if (userType === "store") router.push("/store");
@@ -40,6 +45,7 @@ export default function LoginPage() {
       router.refresh();
     } catch {
       setError("Network error");
+      toast.error("Network error");
     } finally {
       setLoading(false);
     }
@@ -110,8 +116,12 @@ export default function LoginPage() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4 mt-6 pt-5 border-t border-slate-200">
-          <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 shadow-sm mt-2" disabled={loading}>
-            {loading ? "Authenticating..." : (
+          <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 shadow-sm mt-2 cursor-pointer" disabled={loading}>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="size-4 animate-spin" /> Authenticating...
+              </span>
+            ) : (
               <span className="flex items-center justify-center gap-2">
                 Sign In to Workspace <ArrowRight className="size-4" />
               </span>

@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, LogOut, Timer, ShieldCheck, Layers, Plus } from "lucide-react";
+import { Clock, LogOut, Timer, ShieldCheck, Layers, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastApiError } from "@/lib/utils";
 
 interface AgentClockInWidgetProps {
   agentId: string;
@@ -200,13 +201,17 @@ export function AgentClockInWidget({ agentId }: AgentClockInWidgetProps) {
                   : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
               }`}
             >
-              {isShift1Completed ? (
+              {submitting ? (
                 <>
-                  <Plus className="size-4" /> {submitting ? "Starting..." : `Clock-In Shift #${shiftCount + 1} (Roster)`}
+                  <Loader2 className="size-4 animate-spin" /> Processing...
+                </>
+              ) : isShift1Completed ? (
+                <>
+                  <Plus className="size-4" /> Clock-In Shift #{shiftCount + 1} (Roster)
                 </>
               ) : (
                 <>
-                  <Timer className="size-4" /> {submitting ? "Clocking In..." : "Clock-In Shift #1"}
+                  <Timer className="size-4" /> Clock-In Shift #1
                 </>
               )}
             </Button>
@@ -218,7 +223,15 @@ export function AgentClockInWidget({ agentId }: AgentClockInWidgetProps) {
               onClick={() => handleClockAction("clock_out")}
               className="w-full md:w-auto bg-amber-600 hover:bg-amber-500 text-white font-bold px-6 py-5 rounded-xl shadow-lg shadow-amber-600/20 gap-2 cursor-pointer transition-all"
             >
-              <LogOut className="size-4" /> {submitting ? "Clocking Out..." : `Clock-Out Shift #${activeShift.shift_number}`}
+              {submitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Clocking Out...
+                </>
+              ) : (
+                <>
+                  <LogOut className="size-4" /> Clock-Out Shift #{activeShift.shift_number}
+                </>
+              )}
             </Button>
           )}
         </div>

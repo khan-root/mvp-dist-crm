@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CITIES_DATA } from "@/lib/data/citiesData";
-import { UserCheck, ShieldCheck, MapPin, Briefcase, CreditCard, ArrowLeft, Target } from "lucide-react";
+import { toastApiError } from "@/lib/utils";
+import { UserCheck, ShieldCheck, MapPin, Briefcase, CreditCard, ArrowLeft, Target, Loader2 } from "lucide-react";
 
 const PROVINCES = [
   "Punjab",
@@ -102,19 +103,27 @@ export default function NewAgentPage() {
     setError("");
 
     if (password && password !== confirmPassword) {
-      setError("Passwords do not match");
+      const msg = "Passwords do not match";
+      toastApiError(msg);
+      setError(msg);
       return;
     }
     if (password && password.length < 6) {
-      setError("Password must be at least 6 characters");
+      const msg = "Password must be at least 6 characters";
+      toastApiError(msg);
+      setError(msg);
       return;
     }
     if (!distributor_id) {
-      setError("Please select a distributor");
+      const msg = "Please select a distributor";
+      toastApiError(msg);
+      setError(msg);
       return;
     }
     if (!territory_id) {
-      setError("Please select a territory");
+      const msg = "Please select a territory";
+      toastApiError(msg);
+      setError(msg);
       return;
     }
 
@@ -166,12 +175,14 @@ export default function NewAgentPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to create agent");
         setError(data.error || "Failed to create agent");
         return;
       }
       router.push("/dashboard/agents");
       router.refresh();
-    } catch {
+    } catch (err: any) {
+      toastApiError(err, "Network error occurred");
       setError("Network error occurred");
     } finally {
       setLoading(false);
@@ -573,7 +584,14 @@ export default function NewAgentPage() {
               <Link href="/dashboard/agents">Cancel</Link>
             </Button>
             <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]">
-              {loading ? "Creating Agent…" : "Onboard Field Agent"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Agent…
+                </>
+              ) : (
+                "Onboard Field Agent"
+              )}
             </Button>
           </CardFooter>
         </Card>

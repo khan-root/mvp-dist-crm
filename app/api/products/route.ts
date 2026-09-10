@@ -73,12 +73,27 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const distributorId = searchParams.get("distributor_id");
     const categoryId = searchParams.get("category_id");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
+
     await dbConnect();
     const filter: Record<string, unknown> = { tenant_id: session.tenantId, "status.is_active": true };
     if (distributorId) filter.distributor_id = distributorId;
     if (categoryId) filter.category_id = categoryId;
-    const list = await Product.find(filter).sort({ product_name: 1 }).lean();
-    return NextResponse.json({ data: list });
+
+    const [list, total] = await Promise.all([
+      Product.find(filter).sort({ product_name: 1 }).skip(skip).limit(limit).lean(),
+      Product.countDocuments(filter),
+    ]);
+
+    return NextResponse.json({
+      data: list,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (e) {
     if (e instanceof Response) throw e;
     return NextResponse.json({ error: "Failed to list products" }, { status: 500 });

@@ -29,8 +29,14 @@ interface BiltyInputRow {
 
 const PAGE_SIZE = 10;
 
+const ensureArray = <T = any,>(data: any): T[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
 export function ShipmentsClientView({ initialShipments, warehouses, products, currentUser }: ShipmentsClientViewProps) {
-  const [shipments, setShipments] = useState(initialShipments);
+  const [shipments, setShipments] = useState<any[]>(() => ensureArray(initialShipments));
   const [searchTerm, setSearchTerm] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -54,7 +60,9 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
   const isWarehouseUser = currentUser?.role_id?.code === "warehouse_manager" || currentUser?.role_id?.code === "warehouse_operator";
   const userWarehouseId = currentUser?.assigned_warehouse_id?._id || currentUser?.assigned_warehouse_id;
 
-  const filteredShipments = shipments.filter((shp) => {
+  const safeShipments = ensureArray(shipments);
+
+  const filteredShipments = safeShipments.filter((shp) => {
     if (isWarehouseUser && userWarehouseId) {
       if (shp.warehouse_id?._id !== userWarehouseId) return false;
     }
@@ -80,7 +88,7 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
       const res = await fetch("/api/supply-chain/shipments");
       if (res.ok) {
         const data = await res.json();
-        setShipments(data);
+        setShipments(ensureArray(data));
       }
     } catch (e) {
       console.error(e);
@@ -161,7 +169,7 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
     }
   };
 
-  const totalReceivedVolume = shipments.reduce((sum, s) => sum + (s.quantity_received || 0), 0);
+  const totalReceivedVolume = safeShipments.reduce((sum, s) => sum + (s.quantity_received || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -199,7 +207,7 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 border-t border-slate-800/80 pt-5">
           <div className="rounded-lg bg-slate-800/40 p-3 backdrop-blur-sm">
             <div className="text-xs text-slate-400">Total Cargo Shipments</div>
-            <div className="text-xl font-bold text-white">{shipments.length} Arrivals</div>
+            <div className="text-xl font-bold text-white">{safeShipments.length} Arrivals</div>
           </div>
           <div className="rounded-lg bg-slate-800/40 p-3 backdrop-blur-sm">
             <div className="text-xs text-slate-400">Total Bulk Stock Received</div>
@@ -213,8 +221,8 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
       </div>
 
       {/* Filter Toolbar */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="shadow-xs border-slate-200/90 dark:border-slate-800">
+        <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -541,8 +549,8 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
                         totalBiltyAllocated === Number(quantityReceived)
                           ? "text-emerald-600 font-bold"
                           : totalBiltyAllocated > Number(quantityReceived)
-                          ? "text-rose-600 font-bold"
-                          : "text-amber-600 font-bold"
+                            ? "text-rose-600 font-bold"
+                            : "text-amber-600 font-bold"
                       }
                     >
                       {totalBiltyAllocated} / {quantityReceived} {unitOfMeasure}

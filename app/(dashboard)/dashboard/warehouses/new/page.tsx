@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { toastApiError } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+
 export default function NewWarehousePage() {
   const router = useRouter();
   const [distributors, setDistributors] = useState<Array<{ _id: string; company_name: string }>>([]);
@@ -49,13 +52,15 @@ export default function NewWarehousePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create");
+        toastApiError(data, "Failed to create warehouse");
+        setError(data.error || "Failed to create warehouse");
         return;
       }
       router.push("/dashboard/warehouses");
       router.refresh();
-    } catch {
-      setError("Network error");
+    } catch (err: any) {
+      toastApiError(err, "Network error occurred");
+      setError("Network error occurred");
     } finally {
       setLoading(false);
     }
@@ -111,8 +116,17 @@ export default function NewWarehousePage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={loading}>{loading ? "Creating…" : "Create"}</Button>
+          <CardFooter className="flex justify-between">
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create"
+              )}
+            </Button>
             <Button type="button" variant="outline" asChild>
               <Link href="/dashboard/warehouses">Cancel</Link>
             </Button>

@@ -15,6 +15,10 @@ import { GlobalGeoFilter, GeoFilterState } from "@/components/global-geo-filter"
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { toast } from "sonner";
 
+import { useEffect } from "react";
+import { useStore } from "@/lib/store/useStore";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
+
 interface CategoryItem {
   _id: string;
   category_name: string;
@@ -49,8 +53,19 @@ export function CatalogClientView({
   brands: BrandItem[];
   distributors: DistributorItem[];
 }) {
-  const [categories, setCategories] = useState<CategoryItem[]>(initialCategories);
-  const [brands, setBrands] = useState<BrandItem[]>(initialBrands);
+  const categories = useStore((state) => state.categories);
+  const brands = useStore((state) => state.brands);
+  const setStoreCategories = useStore((state) => state.setCategories);
+  const setStoreBrands = useStore((state) => state.setBrands);
+  const updateCategoryInStore = useStore((state) => state.updateCategory);
+  const deleteCategoryInStore = useStore((state) => state.deleteCategory);
+  const updateBrandInStore = useStore((state) => state.updateBrand);
+  const deleteBrandInStore = useStore((state) => state.deleteBrand);
+
+  useEffect(() => {
+    setStoreCategories(initialCategories);
+    setStoreBrands(initialBrands);
+  }, [initialCategories, initialBrands, setStoreCategories, setStoreBrands]);
 
   const [catPage, setCatPage] = useState(1);
   const [brandPage, setBrandPage] = useState(1);
@@ -60,9 +75,19 @@ export function CatalogClientView({
   const [editCat, setEditCat] = useState<CategoryItem | null>(null);
   const [isEditCatModalOpen, setIsEditCatModalOpen] = useState(false);
 
+  // Delete Category Modal state
+  const [deleteCatTarget, setDeleteCatTarget] = useState<CategoryItem | null>(null);
+  const [isDeleteCatModalOpen, setIsDeleteCatModalOpen] = useState(false);
+  const [deletingCat, setDeletingCat] = useState(false);
+
   // Edit Brand State
   const [editBrand, setEditBrand] = useState<BrandItem | null>(null);
   const [isEditBrandModalOpen, setIsEditBrandModalOpen] = useState(false);
+
+  // Delete Brand Modal state
+  const [deleteBrandTarget, setDeleteBrandTarget] = useState<BrandItem | null>(null);
+  const [isDeleteBrandModalOpen, setIsDeleteBrandModalOpen] = useState(false);
+  const [deletingBrand, setDeletingBrand] = useState(false);
 
   const [geoFilters, setGeoFilters] = useState<GeoFilterState>({
     region: "all",
@@ -123,7 +148,7 @@ export function CatalogClientView({
       const data = await res.json();
       if (data.success) {
         toast.success("Category updated successfully");
-        setCategories((prev) => prev.map((c) => (c._id === editCat._id ? { ...c, ...editCat } : c)));
+        updateCategoryInStore(editCat);
         setIsEditCatModalOpen(false);
       } else {
         toast.error(data.error || "Failed to update category");
@@ -133,19 +158,29 @@ export function CatalogClientView({
     }
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
+  const openDeleteCategoryModal = (cat: CategoryItem) => {
+    setDeleteCatTarget(cat);
+    setIsDeleteCatModalOpen(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!deleteCatTarget) return;
+    setDeletingCat(true);
     try {
-      const res = await fetch(`/api/categories?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/categories?id=${deleteCatTarget._id}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
-        toast.success("Category deleted");
-        setCategories((prev) => prev.filter((c) => c._id !== id));
+        toast.success("Category deleted successfully");
+        deleteCategoryInStore(deleteCatTarget._id);
+        setIsDeleteCatModalOpen(false);
+        setDeleteCatTarget(null);
       } else {
-        toast.error(data.error);
+        toast.error(data.error || "Failed to delete category");
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || "Network error");
+    } finally {
+      setDeletingCat(false);
     }
   };
 
@@ -160,7 +195,7 @@ export function CatalogClientView({
       const data = await res.json();
       if (data.success) {
         toast.success("Brand updated successfully");
-        setBrands((prev) => prev.map((b) => (b._id === editBrand._id ? { ...b, ...editBrand } : b)));
+        updateBrandInStore(editBrand);
         setIsEditBrandModalOpen(false);
       } else {
         toast.error(data.error || "Failed to update brand");
@@ -170,19 +205,29 @@ export function CatalogClientView({
     }
   };
 
-  const handleDeleteBrand = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this brand?")) return;
+  const openDeleteBrandModal = (brand: BrandItem) => {
+    setDeleteBrandTarget(brand);
+    setIsDeleteBrandModalOpen(true);
+  };
+
+  const confirmDeleteBrand = async () => {
+    if (!deleteBrandTarget) return;
+    setDeletingBrand(true);
     try {
-      const res = await fetch(`/api/brands?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/brands?id=${deleteBrandTarget._id}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
-        toast.success("Brand deleted");
-        setBrands((prev) => prev.filter((b) => b._id !== id));
+        toast.success("Brand deleted successfully");
+        deleteBrandInStore(deleteBrandTarget._id);
+        setIsDeleteBrandModalOpen(false);
+        setDeleteBrandTarget(null);
       } else {
-        toast.error(data.error);
+        toast.error(data.error || "Failed to delete brand");
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || "Network error");
+    } finally {
+      setDeletingBrand(false);
     }
   };
 
@@ -281,7 +326,7 @@ export function CatalogClientView({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteCategory(c._id)}
+                              onClick={() => openDeleteCategoryModal(c)}
                               className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 cursor-pointer"
                             >
                               <Trash2 className="size-3.5" />
@@ -378,7 +423,7 @@ export function CatalogClientView({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteBrand(b._id)}
+                              onClick={() => openDeleteBrandModal(b)}
                               className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 cursor-pointer"
                             >
                               <Trash2 className="size-3.5" />
@@ -405,7 +450,7 @@ export function CatalogClientView({
 
       {/* Edit Category Modal */}
       <Dialog open={isEditCatModalOpen} onOpenChange={setIsEditCatModalOpen}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="sm:max-w-lg bg-white overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Category Details</DialogTitle>
             <DialogDescription>Update tax rates and trade margin presets</DialogDescription>
@@ -421,8 +466,8 @@ export function CatalogClientView({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1 min-w-0">
                   <Label className="text-xs font-semibold">Default GST Rate (%)</Label>
                   <Input
                     type="number"
@@ -430,7 +475,7 @@ export function CatalogClientView({
                     onChange={(e) => setEditCat({ ...editCat, default_gst_rate: Number(e.target.value) })}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <Label className="text-xs font-semibold">Default Trade Margin (%)</Label>
                   <Input
                     type="number"
@@ -455,7 +500,7 @@ export function CatalogClientView({
 
       {/* Edit Brand Modal */}
       <Dialog open={isEditBrandModalOpen} onOpenChange={setIsEditBrandModalOpen}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="sm:max-w-lg bg-white overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Brand Profile</DialogTitle>
             <DialogDescription>Update principal owner and country of origin details</DialogDescription>
@@ -491,6 +536,30 @@ export function CatalogClientView({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Category Confirmation Modal */}
+      <ConfirmDeleteModal
+        open={isDeleteCatModalOpen}
+        onOpenChange={setIsDeleteCatModalOpen}
+        title="Delete Category"
+        description="Are you sure you want to delete this category? All catalog products associated with this category preset may be affected."
+        itemName={deleteCatTarget?.category_name}
+        confirmText="Delete Category"
+        onConfirm={confirmDeleteCategory}
+        loading={deletingCat}
+      />
+
+      {/* Delete Brand Confirmation Modal */}
+      <ConfirmDeleteModal
+        open={isDeleteBrandModalOpen}
+        onOpenChange={setIsDeleteBrandModalOpen}
+        title="Delete Brand"
+        description="Are you sure you want to delete this brand? Products linked to this manufacturer brand will lose compliance attributes."
+        itemName={deleteBrandTarget?.brand_name}
+        confirmText="Delete Brand"
+        onConfirm={confirmDeleteBrand}
+        loading={deletingBrand}
+      />
     </div>
   );
 }

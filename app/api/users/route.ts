@@ -15,6 +15,16 @@ const CreateUserSchema = z.object({
   assigned_warehouse_id: z.string().optional(),
 });
 
+const UpdateUserSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).optional(),
+  phone: z.string().optional(),
+  role_id: z.string().min(1).optional(),
+  assigned_facility: z.string().optional(),
+  assigned_warehouse_id: z.string().nullable().optional(),
+  status: z.enum(["active", "inactive", "suspended"]).optional(),
+});
+
 export async function GET() {
   try {
     const session = await requireSession();
@@ -87,3 +97,71 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: e?.message || "Failed to create user account" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await requireSession();
+    const body = await request.json();
+    const parsed = UpdateUserSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    await dbConnect();
+
+    const user = await User.findOne({ _id: parsed.data.id, tenant_id: session.tenantId });
+    if (!user) {
+      return NextResponse.json({ error: "User account not found." }, { status: 404 });
+    }
+
+    const updatePayload: Record<string, any> = {};
+
+    if (parsed.data.name) {
+      updatePayload.name = parsed.data.name;
+      const nameParts = parsed.data.name.trim().split(" ");
+      updatePayload.first_name = nameParts[0] || parsed.data.name;
+      updatePayload.last_name = nameParts.slice(1).join(" ") || "Employee";
+    }
+
+    if (parsed.data.phone !== undefined) {
+      updatePayload.phone = parsed.data.phone && parsed.data.phone.trim() ? parsed.data.phone.trim() : undefined;
+    }
+
+    if (parsed.data.role_id) {
+      const targetRole = await Role.findOne({ _id: parsed.data.role_id, tenant_id: session.tenantId });
+      if (!targetRole) {
+        return NextResponse.json({ error: "Invalid role selected." }, { status: 400 });
+      }
+      updatePayload.role_id = targetRole._id;
+    }
+
+    if (parsed.data.assigned_facility !== undefined) {
+      updatePayload.assigned_facility = parsed.data.assigned_facility;
+    }
+
+    if (parsed.data.assigned_warehouse_id !== undefined) {
+      updatePayload.assigned_warehouse_id = parsed.data.assigned_warehouse_id || undefined;
+    }
+
+    if (parsed.data.status) {
+      updatePayload.status = parsed.data.status;
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: parsed.data.id, tenant_id: session.tenantId },
+      { $set: updatePayload },
+      { new: true }
+    )
+      .populate("role_id", "name code permissions")
+      .populate("assigned_warehouse_id", "warehouse_name warehouse_code")
+      .lean();
+
+    return NextResponse.json({ data: updatedUser });
+  } catch (e: any) {
+    console.error("Error updating user account:", e);
+    if (e instanceof Response) throw e;
+    return NextResponse.json({ error: e?.message || "Failed to update user account" }, { status: 500 });
+  }
+}
+

@@ -9,13 +9,15 @@ async function getStoresData() {
   await dbConnect();
   const user = await getCurrentUser();
   const tenantId = user?.tenant_id;
-  if (!tenantId) return { list: [], agents: [], territories: [] };
+  if (!tenantId) return { list: [], total: 0, agents: [], territories: [] };
 
-  const [stores, agents, territories] = await Promise.all([
+  const [stores, totalStores, agents, territories] = await Promise.all([
     Store.find({ tenant_id: tenantId, is_active: true })
       .sort({ created_at: -1 })
+      .limit(10)
       .populate("assigned_agent_id", "agent_code first_name last_name personal_info")
       .lean(),
+    Store.countDocuments({ tenant_id: tenantId, is_active: true }),
     Agent.find({ tenant_id: tenantId, is_active: true })
       .sort({ first_name: 1 })
       .lean(),
@@ -25,6 +27,7 @@ async function getStoresData() {
   ]);
 
   return {
+    total: totalStores,
     list: (stores || []).map((s: any) => ({
       _id: s._id.toString(),
       store_code: s.store_code,
@@ -56,11 +59,11 @@ async function getStoresData() {
 }
 
 export default async function StoresPage() {
-  const { list, agents, territories } = await getStoresData();
+  const { list, total, agents, territories } = await getStoresData();
 
   return (
     <div className="space-y-6 w-full">
-      <StoresClientView stores={list} agents={agents} territories={territories} />
+      <StoresClientView initialStores={list} initialTotalRecords={total} agents={agents} territories={territories} />
     </div>
   );
 }

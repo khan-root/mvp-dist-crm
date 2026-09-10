@@ -42,6 +42,7 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 
 interface GovernanceTier {
   tier: number;
@@ -363,13 +364,21 @@ export default function FieldForcePoliciesPage() {
     }
   }
 
-  async function handleDeletePolicy() {
+  const [isDeletePolicyModalOpen, setIsDeletePolicyModalOpen] = useState(false);
+  const [deletingPolicy, setDeletingPolicy] = useState(false);
+
+  function onClickDeletePolicy() {
     if (!activePolicy || !activePolicy._id) return;
     if (activePolicy.is_default) {
       setFeedback({ type: "error", text: "Cannot delete the primary default policy." });
       return;
     }
-    if (!confirm(`Are you sure you want to delete policy "${activePolicy.name}"?`)) return;
+    setIsDeletePolicyModalOpen(true);
+  }
+
+  async function confirmDeletePolicy() {
+    if (!activePolicy || !activePolicy._id) return;
+    setDeletingPolicy(true);
 
     try {
       const res = await fetch(`/api/policies/${activePolicy._id}`, {
@@ -377,11 +386,14 @@ export default function FieldForcePoliciesPage() {
         credentials: "include",
       });
       if (res.ok) {
+        setIsDeletePolicyModalOpen(false);
         setFeedback({ type: "success", text: "Policy deleted successfully" });
         await fetchPolicies();
       }
     } catch {
       setFeedback({ type: "error", text: "Failed to delete policy" });
+    } finally {
+      setDeletingPolicy(false);
     }
   }
 
@@ -640,7 +652,7 @@ export default function FieldForcePoliciesPage() {
 
           {activePolicy && !activePolicy.is_default && (
             <Button
-              onClick={handleDeletePolicy}
+              onClick={onClickDeletePolicy}
               variant="outline"
               size="icon"
               className="border-rose-900/50 bg-rose-950/20 text-rose-400 hover:bg-rose-900/40"
@@ -1210,6 +1222,18 @@ export default function FieldForcePoliciesPage() {
           </Tabs>
         </div>
       )}
+
+      {/* Confirm Delete Policy Modal */}
+      <ConfirmDeleteModal
+        open={isDeletePolicyModalOpen}
+        onOpenChange={setIsDeletePolicyModalOpen}
+        title="Delete Governance SOP Policy"
+        description="Are you sure you want to delete this SOP policy? Operations governed by this policy will revert to the default primary policy."
+        itemName={activePolicy?.name}
+        confirmText="Delete Policy"
+        onConfirm={confirmDeletePolicy}
+        loading={deletingPolicy}
+      />
     </div>
   );
 }

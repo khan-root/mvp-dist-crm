@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Package, Search, Check, CheckSquare, Square } from "lucide-react";
+import { toastApiError } from "@/lib/utils";
+import { Package, Search, Check, CheckSquare, Square, Loader2 } from "lucide-react";
 
 interface ProductItem {
   _id: string;
@@ -87,12 +88,14 @@ export function AgentProductAssignmentDialog({
       });
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to update product assignments");
         setError(data.error || "Failed to update product assignments");
         return;
       }
       setOpen(false);
       router.refresh();
-    } catch {
+    } catch (err: any) {
+      toastApiError(err, "Network error saving product assignments");
       setError("Network error saving product assignments");
     } finally {
       setLoading(false);
@@ -193,7 +196,14 @@ export function AgentProductAssignmentDialog({
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={loading || fetching}>
-            {loading ? "Saving Product Authorization…" : `Save (${selectedProductIds.length}) Authorized SKUs`}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving Product Authorization…
+              </>
+            ) : (
+              `Save (${selectedProductIds.length}) Authorized SKUs`
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

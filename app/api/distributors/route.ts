@@ -21,7 +21,7 @@ const CreateSchema = z.object({
     .optional(),
   contact: z.object({
     phone: z.string().min(1),
-    email: z.string().email(),
+    email: z.string().email().or(z.literal("")).optional(),
     alternate_phone: z.string().optional(),
     website: z.string().optional(),
   }),
@@ -60,14 +60,29 @@ const CreateSchema = z.object({
     .optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await requireSession();
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
+
     await dbConnect();
-    const list = await Distributor.find({ tenant_id: session.tenantId, is_active: true })
-      .sort({ created_at: -1 })
-      .lean();
-    return NextResponse.json({ data: list });
+    const filter = { tenant_id: session.tenantId, is_active: true };
+
+    const [list, total] = await Promise.all([
+      Distributor.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+      Distributor.countDocuments(filter),
+    ]);
+
+    return NextResponse.json({
+      data: list,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (e) {
     if (e instanceof Response) throw e;
     return NextResponse.json({ error: "Failed to list distributors" }, { status: 500 });

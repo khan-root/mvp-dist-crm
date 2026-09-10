@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Warehouse as WarehouseIcon, Plus, ArrowLeftRight, Building2, MapPin, Phone, ShieldCheck, Thermometer } from "lucide-react";
+import { Warehouse as WarehouseIcon, Plus, ArrowLeftRight, Building2, MapPin, Phone, ShieldCheck, Thermometer, Loader2 } from "lucide-react";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { toast } from "sonner";
+
+import { toastApiError } from "@/lib/utils";
 
 interface WarehouseItem {
   _id: string;
@@ -25,12 +27,19 @@ interface WarehouseItem {
 
 interface WarehousesClientViewProps {
   initialWarehouses: WarehouseItem[];
+  initialTotalRecords?: number;
   distributors: any[];
   products: any[];
 }
 
-export function WarehousesClientView({ initialWarehouses = [], distributors = [], products = [] }: WarehousesClientViewProps) {
+export function WarehousesClientView({
+  initialWarehouses = [],
+  initialTotalRecords = 0,
+  distributors = [],
+  products = [],
+}: WarehousesClientViewProps) {
   const [warehouses, setWarehouses] = useState<WarehouseItem[]>(initialWarehouses);
+  const [totalRecords, setTotalRecords] = useState<number>(initialTotalRecords || initialWarehouses.length);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -62,17 +71,40 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
   });
   const [transferring, setTransferring] = useState(false);
 
+  const fetchPage = async (page: number) => {
+    try {
+      const res = await fetch(`/api/warehouses?page=${page}&limit=${pageSize}`);
+      const data = await res.json();
+      if (res.ok) {
+        setWarehouses(data.data || []);
+        if (typeof data.total === "number") setTotalRecords(data.total);
+      } else {
+        toastApiError(toast, data, "Failed to load warehouses");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to fetch page");
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchPage(page);
+  };
+
+  const [creating, setCreating] = useState(false);
+
   const handleCreateWarehouse = async () => {
     if (!warehouseForm.warehouse_name || !warehouseForm.warehouse_code) {
       toast.error("Warehouse name and code are required");
       return;
     }
+    setCreating(true);
     try {
       const res = await fetch("/api/warehouses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          distributor_id: warehouseForm.distributor_id || distributors[0]?._id || "65e...",
+          distributor_id: warehouseForm.distributor_id || distributors[0]?._id || "",
           warehouse_name: warehouseForm.warehouse_name,
           warehouse_code: warehouseForm.warehouse_code,
           address: { line1: warehouseForm.line1 || "Market Hub", city: warehouseForm.city, state: warehouseForm.state },
@@ -87,13 +119,15 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
       const data = await res.json();
       if (res.ok) {
         toast.success("Warehouse Hub created successfully");
-        setWarehouses([data.data, ...warehouses]);
+        fetchPage(currentPage);
         setIsAddModalOpen(false);
       } else {
-        toast.error(data.error || "Failed to create warehouse");
+        toastApiError(toast, data, "Failed to create warehouse");
       }
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -114,7 +148,7 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
         toast.success(data.message);
         setIsTransferModalOpen(false);
       } else {
-        toast.error(data.error || "Stock transfer failed");
+        toastApiError(toast, data, "Stock transfer failed");
       }
     } catch (err: any) {
       toast.error(err.message);
@@ -123,8 +157,7 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
     }
   };
 
-  const totalPages = Math.ceil(warehouses.length / pageSize) || 1;
-  const paginatedWarehouses = warehouses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
   const totalArea = warehouses.reduce((acc, w) => acc + (w.capacity?.total_area_sqft || 0), 0);
   const tempControlledCount = warehouses.filter((w) => w.capacity?.temperature_controlled).length;
@@ -227,11 +260,17 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <Button variant="outline" onClick={() => setIsTransferModalOpen(false)}>
+                <Button variant="outline" onClick={() => setIsTransferModalOpen(false)} disabled={transferring}>
                   Cancel
                 </Button>
                 <Button onClick={handleTransferStock} disabled={transferring} className="bg-emerald-600 text-white font-bold cursor-pointer">
-                  {transferring ? "Processing..." : "Confirm Stock Transfer"}
+                  {transferring ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="size-3.5 animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    "Confirm Stock Transfer"
+                  )}
                 </Button>
               </div>
             </DialogContent>
@@ -335,11 +374,17 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                <Button variant="outline" onClick={() => setIsAddModalOpen(false)} disabled={creating}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateWarehouse} className="bg-emerald-600 text-white font-bold cursor-pointer">
-                  Save Warehouse Hub
+                <Button onClick={handleCreateWarehouse} disabled={creating} className="bg-emerald-600 text-white font-bold cursor-pointer">
+                  {creating ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="size-3.5 animate-spin" /> Saving Hub...
+                    </span>
+                  ) : (
+                    "Save Warehouse Hub"
+                  )}
                 </Button>
               </div>
             </DialogContent>
@@ -392,7 +437,7 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
       {/* Warehouse Hub Table */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg font-bold text-slate-900">All Registered Warehouse Hubs ({warehouses.length})</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">All Registered Warehouse Hubs ({totalRecords})</CardTitle>
           <CardDescription>Primary storage facilities, manager contact info, and capacity presets</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -413,7 +458,7 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedWarehouses.map((w) => (
+                  {warehouses.map((w) => (
                     <TableRow key={w._id} className="hover:bg-slate-50 transition-colors">
                       <TableCell className="font-mono text-xs font-bold text-emerald-700">{w.warehouse_code}</TableCell>
                       <TableCell className="font-semibold text-slate-900">{w.warehouse_name}</TableCell>
@@ -458,8 +503,8 @@ export function WarehousesClientView({ initialWarehouses = [], distributors = []
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={(p) => setCurrentPage(p)}
-                totalItems={warehouses.length}
+                onPageChange={handlePageChange}
+                totalRecords={totalRecords}
                 pageSize={pageSize}
               />
             </>

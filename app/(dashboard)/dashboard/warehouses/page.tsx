@@ -7,8 +7,9 @@ import { WarehousesClientView } from "./warehouses-client-view";
 export default async function WarehousesPage() {
   await connectDB();
 
-  const [warehouses, distributors, products] = await Promise.all([
-    Warehouse.find({ is_active: true }).sort({ warehouse_name: 1 }).lean(),
+  const [warehouses, totalWarehouses, distributors, products] = await Promise.all([
+    Warehouse.find({ is_active: true }).sort({ warehouse_name: 1 }).limit(10).lean(),
+    Warehouse.countDocuments({ is_active: true }),
     Distributor.find({ is_active: true }).select("company_name distributor_code").lean(),
     Product.find({ "status.is_active": true }).select("product_name product_code sku pricing inventory").lean(),
   ]);
@@ -39,6 +40,7 @@ export default async function WarehousesPage() {
   return (
     <WarehousesClientView
       initialWarehouses={serializedWarehouses}
+      initialTotalRecords={totalWarehouses}
       distributors={serializedDistributors}
       products={serializedProducts}
     />

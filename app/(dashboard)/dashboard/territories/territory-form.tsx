@@ -15,7 +15,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Compass, MapPin, Globe2, Edit3, X } from "lucide-react";
+import { Compass, MapPin, Globe2, Edit3, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
 import { PAKISTAN_REGIONS } from "@/components/global-geo-filter";
 import { getCitiesByProvince } from "@/lib/data/citiesData";
 
@@ -87,10 +89,13 @@ export function TerritoryForm({ trigger }: { trigger: React.ReactNode }) {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create territory");
+        const msg = getApiErrorMessage(data, "Failed to create territory");
+        setError(msg);
+        toastApiError(toast, data, "Failed to create territory");
         return;
       }
 
+      toast.success("Territory created successfully!");
       setOpen(false);
       setTerritoryName("");
       setTerritoryCode("");
@@ -101,6 +106,7 @@ export function TerritoryForm({ trigger }: { trigger: React.ReactNode }) {
       router.refresh();
     } catch {
       setError("Network error while creating territory");
+      toast.error("Network error while creating territory");
     } finally {
       setLoading(false);
     }
@@ -291,8 +297,14 @@ export function TerritoryForm({ trigger }: { trigger: React.ReactNode }) {
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={loading} className="bg-slate-900 text-white hover:bg-slate-800 gap-1.5">
-              {loading ? "Creating Territory…" : "Save & Add Territory"}
+            <Button type="submit" size="sm" disabled={loading} className="bg-slate-900 text-white hover:bg-slate-800 gap-1.5 cursor-pointer">
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="size-4 animate-spin" /> Creating Territory...
+                </span>
+              ) : (
+                "Save & Add Territory"
+              )}
             </Button>
           </DialogFooter>
         </form>

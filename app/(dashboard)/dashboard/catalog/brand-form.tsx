@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
+
 const DOMAINS = [
   { value: "fmcg", label: "FMCG / Packaged Consumer Goods" },
   { value: "pharma", label: "Pharmaceuticals & Healthcare" },
@@ -30,6 +34,8 @@ const DOMAINS = [
 
 const COUNTRIES = ["Pakistan", "Japan", "Germany", "China", "United States", "United Kingdom", "South Korea", "Turkey", "UAE"];
 
+import { useStore } from "@/lib/store/useStore";
+
 export function BrandForm({
   distributors,
   trigger,
@@ -38,6 +44,8 @@ export function BrandForm({
   trigger: React.ReactNode;
 }) {
   const router = useRouter();
+  const addBrandToStore = useStore((state) => state.addBrand);
+
   const [open, setOpen] = useState(false);
   const [distributor_id, setDistributorId] = useState("");
   const [brand_name, setBrandName] = useState("");
@@ -74,9 +82,15 @@ export function BrandForm({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create brand");
+        const msg = getApiErrorMessage(data, "Failed to create brand");
+        setError(msg);
+        toastApiError(toast, data, "Failed to create brand");
         return;
       }
+      if (data.data) {
+        addBrandToStore(data.data);
+      }
+      toast.success("Brand saved successfully");
       setOpen(false);
       setBrandName("");
       setBrandCode("");
@@ -85,6 +99,7 @@ export function BrandForm({
       router.refresh();
     } catch {
       setError("Network error");
+      toast.error("Network error");
     } finally {
       setLoading(false);
     }
@@ -93,7 +108,7 @@ export function BrandForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Add Brand</DialogTitle>
           <DialogDescription>Create a manufacturer or principal brand for your domain catalog</DialogDescription>
@@ -111,8 +126,8 @@ export function BrandForm({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="brand_name">Brand Name *</Label>
               <Input
                 id="brand_name"
@@ -122,7 +137,7 @@ export function BrandForm({
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="brand_code">Brand Code *</Label>
               <Input
                 id="brand_code"
@@ -134,8 +149,8 @@ export function BrandForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 min-w-0">
               <Label>Industry Domain *</Label>
               <Select value={industry_domain} onValueChange={setIndustryDomain}>
                 <SelectTrigger><SelectValue placeholder="Select domain" /></SelectTrigger>
@@ -146,7 +161,7 @@ export function BrandForm({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label>Country of Origin</Label>
               <Select value={country_of_origin} onValueChange={setCountryOfOrigin}>
                 <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
@@ -181,8 +196,16 @@ export function BrandForm({
 
           {error && <p className="text-sm text-destructive font-medium">{error}</p>}
           <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Saving…" : "Save Brand"}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
+            <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="size-4 animate-spin" /> Saving...
+                </span>
+              ) : (
+                "Save Brand"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

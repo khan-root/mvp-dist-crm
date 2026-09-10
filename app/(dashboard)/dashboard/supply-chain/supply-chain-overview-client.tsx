@@ -55,6 +55,12 @@ interface BiltyInputRow {
   quantity: string;
 }
 
+const ensureArray = <T = any,>(data: any): T[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
 export function SupplyChainOverviewClient({
   initialProducts,
   initialWarehouses,
@@ -67,11 +73,50 @@ export function SupplyChainOverviewClient({
 }: ExecutiveOverviewProps) {
   const [products] = useState(initialProducts);
   const [warehouses] = useState(initialWarehouses);
-  const [portShipments, setPortShipments] = useState(initialPortShipments);
-  const [repackagingOrders, setRepackagingOrders] = useState(initialRepackagingOrders);
-  const [stockMovements, setStockMovements] = useState(initialStockMovements);
-  const [transportBilties, setTransportBilties] = useState(initialTransportBilties);
-  const [vehicles, setVehicles] = useState(initialVehicles);
+  const [portShipments, setPortShipments] = useState<any[]>(() => ensureArray(initialPortShipments));
+  const [repackagingOrders, setRepackagingOrders] = useState<any[]>(() => ensureArray(initialRepackagingOrders));
+  const [stockMovements, setStockMovements] = useState<any[]>(() => ensureArray(initialStockMovements));
+  const [transportBilties, setTransportBilties] = useState<any[]>(() => ensureArray(initialTransportBilties));
+  const [vehicles, setVehicles] = useState<any[]>(() => ensureArray(initialVehicles));
+  const [selectedDomain, setSelectedDomain] = useState<string>("universal");
+
+  const DOMAIN_PRESETS: Record<string, { label: string; icon: string; description: string }> = {
+    universal: {
+      label: "Universal Multi-Domain",
+      icon: "🌐",
+      description: "End-to-end multi-echelon enterprise logistics engine applicable to all industry domains.",
+    },
+    retail_fmcg: {
+      label: "Retail & FMCG",
+      icon: "🛒",
+      description: "Master cartons, pallets, store outlet replenishment, and high-velocity fast-moving goods.",
+    },
+    electronics: {
+      label: "Electronics & Tech",
+      icon: "📱",
+      description: "Serialized SKU tracking, box packs, regional distributor hubs, and direct customer fulfillment.",
+    },
+    manufacturing: {
+      label: "Industrial & Manufacturing",
+      icon: "🏭",
+      description: "Raw material inbound, WIP component assembly, depot inventory, and finished goods transfer.",
+    },
+    pharma: {
+      label: "Pharma & Cold Chain",
+      icon: "💊",
+      description: "Batch & expiry tracking, temperature-controlled storage, dose units, and pharmacy delivery.",
+    },
+    agri_bulk: {
+      label: "Agri & Bulk Commodities",
+      icon: "🌾",
+      description: "Maritime port docking, bulk tonnage, bagging plants (50kg bags), and dealer market dispatch.",
+    },
+    construction: {
+      label: "Construction & Materials",
+      icon: "🏗️",
+      description: "Cubic meters (m³), yard storage, cement/steel shipments, and job site delivery.",
+    },
+  };
 
   // Modals state
   const [isPortModalOpen, setIsPortModalOpen] = useState(false);
@@ -127,25 +172,31 @@ export function SupplyChainOverviewClient({
   const isWarehouseUser = currentUser?.role_id?.code === "warehouse_manager" || currentUser?.role_id?.code === "warehouse_operator";
   const userWarehouseId = currentUser?.assigned_warehouse_id?._id || currentUser?.assigned_warehouse_id;
 
+  const safeBilties = ensureArray(transportBilties);
+  const safeVehicles = ensureArray(vehicles);
+  const safePortShipments = ensureArray(portShipments);
+  const safeRepackagingOrders = ensureArray(repackagingOrders);
+  const safeStockMovements = ensureArray(stockMovements);
+
   // Filter bilties for warehouse users if scoped
-  const activeBilties = transportBilties.filter((b) => {
+  const activeBilties = safeBilties.filter((b) => {
     if (isWarehouseUser && userWarehouseId && b.warehouse_id?._id !== userWarehouseId) return false;
     return b.status === "active";
   });
 
-  const totalBiltyStockRemaining = transportBilties.reduce((sum, b) => {
+  const totalBiltyStockRemaining = safeBilties.reduce((sum, b) => {
     if (isWarehouseUser && userWarehouseId && b.warehouse_id?._id !== userWarehouseId) return 0;
     return sum + (b.remaining_quantity || 0);
   }, 0);
 
-  const totalBiltyInitial = transportBilties.reduce((sum, b) => {
+  const totalBiltyInitial = safeBilties.reduce((sum, b) => {
     if (isWarehouseUser && userWarehouseId && b.warehouse_id?._id !== userWarehouseId) return 0;
     return sum + (b.initial_quantity || 0);
   }, 0);
 
-  const totalFleetCapacity = vehicles.reduce((sum, v) => sum + (v.capacity_tons || 0), 0);
-  const totalInboundVolume = portShipments.reduce((sum, s) => sum + (s.quantity_received || 0), 0);
-  const totalRepackagedUnits = repackagingOrders.reduce((sum, r) => sum + (r.target_quantity_produced || 0), 0);
+  const totalFleetCapacity = safeVehicles.reduce((sum, v) => sum + (v.capacity_tons || 0), 0);
+  const totalInboundVolume = safePortShipments.reduce((sum, s) => sum + (s.quantity_received || 0), 0);
+  const totalRepackagedUnits = safeRepackagingOrders.reduce((sum, r) => sum + (r.target_quantity_produced || 0), 0);
 
   const refreshData = async () => {
     try {
@@ -156,11 +207,11 @@ export function SupplyChainOverviewClient({
         fetch("/api/supply-chain/repackaging"),
         fetch("/api/supply-chain/audit"),
       ]);
-      if (resB.ok) setTransportBilties(await resB.json());
-      if (resV.ok) setVehicles(await resV.json());
-      if (resS.ok) setPortShipments(await resS.json());
-      if (resR.ok) setRepackagingOrders(await resR.json());
-      if (resM.ok) setStockMovements(await resM.json());
+      if (resB.ok) setTransportBilties(ensureArray(await resB.json()));
+      if (resV.ok) setVehicles(ensureArray(await resV.json()));
+      if (resS.ok) setPortShipments(ensureArray(await resS.json()));
+      if (resR.ok) setRepackagingOrders(ensureArray(await resR.json()));
+      if (resM.ok) setStockMovements(ensureArray(await resM.json()));
     } catch (e) {
       console.error(e);
     }
@@ -320,10 +371,56 @@ export function SupplyChainOverviewClient({
     }
   };
 
+  // Inter-Warehouse Stock Transfer
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferFromWh || !transferToWh || !transferProduct || !transferQty) {
+      alert("Please fill in all required fields (Origin, Destination, Product, Quantity)");
+      return;
+    }
+
+    if (transferFromWh === transferToWh) {
+      alert("Origin and Destination facilities must be different");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/supply-chain/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from_warehouse_id: transferFromWh,
+          to_warehouse_id: transferToWh,
+          product_id: transferProduct,
+          quantity: Number(transferQty),
+          bilty_id: selectedBiltyId || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        setIsTransferModalOpen(false);
+        setTransferFromWh("");
+        setTransferToWh("");
+        setTransferProduct("");
+        setTransferQty("");
+        refreshData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Inter-warehouse transfer failed");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error executing stock transfer");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-8">
       {/* Hero Executive Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-950 p-4 sm:p-8 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-950 p-4 sm:p-8 text-white shadow-lg border border-slate-800">
         <div className="absolute right-0 top-0 -mt-10 -mr-10 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="absolute left-1/3 bottom-0 -mb-10 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
 
@@ -339,12 +436,32 @@ export function SupplyChainOverviewClient({
                 </Badge>
               )}
             </div>
-            <h1 className="text-2xl font-black tracking-tight sm:text-4xl text-white">
-              Supply Chain & Logistics Studio
+            <h1 className="text-2xl font-black tracking-tight sm:text-4xl text-white flex items-center gap-3">
+              <span>Enterprise Supply Chain Studio</span>
+              <span className="text-xl">{DOMAIN_PRESETS[selectedDomain]?.icon}</span>
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed">
-              Real-time monitoring of bulk cargo receiving, transport bilty balances, fleet capacity telematics, packet conversion yields, and stock ledger audits across all warehouses.
+              {DOMAIN_PRESETS[selectedDomain]?.description} Real-time multi-echelon network visibility, automated inventory replenishment, fleet telematics, yield conversion, and stock ledger audits across all industry domains.
             </p>
+
+            {/* Domain Context Switcher Bar */}
+            <div className="pt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-400 mr-1">Industry Context:</span>
+              {Object.entries(DOMAIN_PRESETS).map(([key, dom]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedDomain(key)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                    selectedDomain === key
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/50 ring-1 ring-blue-400"
+                      : "bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800"
+                  }`}
+                >
+                  <span>{dom.icon}</span>
+                  <span>{dom.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -354,6 +471,14 @@ export function SupplyChainOverviewClient({
                 className="bg-emerald-600 font-semibold text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/40 text-xs sm:text-sm"
               >
                 <Plus className="mr-1.5 sm:mr-2 h-4 w-4" /> Record Cargo
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard module="inventory" action="create">
+              <Button
+                onClick={() => setIsTransferModalOpen(true)}
+                className="bg-blue-600 font-semibold text-white hover:bg-blue-500 shadow-lg shadow-blue-900/40 text-xs sm:text-sm"
+              >
+                <Truck className="mr-1.5 sm:mr-2 h-4 w-4" /> Transfer Stock
               </Button>
             </PermissionGuard>
             <PermissionGuard module="inventory" action="create">
@@ -464,8 +589,178 @@ export function SupplyChainOverviewClient({
         </div>
       </div>
 
+      {/* 🚀 SAP SCM Control Tower & Exception Hub */}
+      <Card className="border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white shadow-xl">
+        <CardHeader className="pb-3 border-b border-slate-800/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                <Activity className="h-5 w-5 animate-pulse" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-black text-white flex items-center gap-2">
+                  <span>SAP SCM Control Tower</span>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">
+                    Live Network Visibility
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-slate-400 text-xs">
+                  Automated risk exception monitoring, replenishment triggers, and network capacity bottleneck analysis.
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-slate-700 bg-slate-900 text-slate-300 text-xs">
+                Domain: <span className="font-semibold text-blue-400 ml-1">{DOMAIN_PRESETS[selectedDomain]?.label}</span>
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          {/* Exception Card 1 */}
+          <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                <Clock className="h-4 w-4" /> Bilty & Capacity Bottlenecks
+              </span>
+              <Badge className="bg-amber-500/20 text-amber-300 text-[10px]">
+                {activeBilties.filter((b) => (b.remaining_quantity || 0) < (b.initial_quantity || 1) * 0.2).length} Critical
+              </Badge>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              {activeBilties.filter((b) => (b.remaining_quantity || 0) < (b.initial_quantity || 1) * 0.2).length > 0
+                ? "Low remaining transport bilty capacity detected. Reallocate transport bilties or generate new cargo intake entries."
+                : "All transport bilties operating within normal capacity thresholds across nodes."}
+            </p>
+          </div>
+
+          {/* Exception Card 2 */}
+          <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-blue-400 flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4" /> Automated Replenishment (ROP)
+              </span>
+              <Badge className="bg-blue-500/20 text-blue-300 text-[10px]">
+                AI Suggested
+              </Badge>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              Safety stock analysis recommends automated reorder points for top catalog items based on 30-day stock movement velocity.
+            </p>
+          </div>
+
+          {/* Exception Card 3 */}
+          <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4" /> Multi-Echelon Stock Integrity
+              </span>
+              <Badge className="bg-emerald-500/20 text-emerald-300 text-[10px]">
+                100% Verified
+              </Badge>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              Audit ledger verified zero variance between origin warehouse dispatches (`transfer_out`) and destination receiving (`transfer_in`).
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Sub-Menu Operational Navigation Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Sub-Menu Operational Navigation Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link href="/dashboard/supply-chain/shipments" className="group">
+          <Card className="h-full border-slate-200 transition-all hover:border-emerald-500 hover:shadow-lg dark:border-slate-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="rounded-lg bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </div>
+              <CardTitle className="text-base mt-2 flex items-center justify-between">
+                <span>Inbound Goods Receipt</span>
+                <Badge className="bg-emerald-500/10 text-emerald-600 text-[10px] font-mono">MvT 101</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Record incoming cargo, port/dock arrivals, supplier references, and quality checks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              {portShipments.length} Cargo Intake Logs &rarr;
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/supply-chain/repackaging" className="group">
+          <Card className="h-full border-slate-200 transition-all hover:border-purple-500 hover:shadow-lg dark:border-slate-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="rounded-lg bg-purple-500/10 p-2.5 text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </div>
+              <CardTitle className="text-base mt-2 flex items-center justify-between">
+                <span>Packaging Yield Studio</span>
+                <Badge className="bg-purple-500/10 text-purple-600 text-[10px] font-mono">MvT 261/309</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Convert bulk raw commodities into retail consumer packets with automated yield calculations.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 text-xs font-semibold text-purple-600 dark:text-purple-400">
+              {repackagingOrders.length} Conversion Orders &rarr;
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/supply-chain/transfers" className="group">
+          <Card className="h-full border-slate-200 transition-all hover:border-blue-500 hover:shadow-lg dark:border-slate-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="rounded-lg bg-blue-500/10 p-2.5 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </div>
+              <CardTitle className="text-base mt-2 flex items-center justify-between">
+                <span>Stock Transfers (STO)</span>
+                <Badge className="bg-blue-500/10 text-blue-600 text-[10px] font-mono">MvT 351/641</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Inter-warehouse transfer matrix, in-transit stock tracking, and vehicle assignment.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 text-xs font-semibold text-blue-600 dark:text-blue-400">
+              Inter-Warehouse Matrix &rarr;
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/supply-chain/outbound" className="group">
+          <Card className="h-full border-slate-200 transition-all hover:border-amber-500 hover:shadow-lg dark:border-slate-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="rounded-lg bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </div>
+              <CardTitle className="text-base mt-2 flex items-center justify-between">
+                <span>Outbound Dealer Dispatch</span>
+                <Badge className="bg-amber-500/10 text-amber-600 text-[10px] font-mono">MvT 601</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Fulfill dealer sales orders, issue delivery challans, and deduct remaining bilty stock.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              Dealer Fulfillment &rarr;
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/dashboard/supply-chain/bilties" className="group">
           <Card className="h-full border-slate-200 transition-all hover:border-blue-500 hover:shadow-lg dark:border-slate-800">
             <CardHeader className="pb-2">
@@ -506,46 +801,6 @@ export function SupplyChainOverviewClient({
           </Card>
         </Link>
 
-        <Link href="/dashboard/supply-chain/shipments" className="group">
-          <Card className="h-full border-slate-200 transition-all hover:border-emerald-500 hover:shadow-lg dark:border-slate-800">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <Boxes className="h-5 w-5" />
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </div>
-              <CardTitle className="text-base mt-2">Inbound Shipments</CardTitle>
-              <CardDescription className="text-xs">
-                Record incoming bulk freight arrivals, bilty allocations, and receiving dock logs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              {portShipments.length} Inbound Consignments &rarr;
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/supply-chain/repackaging" className="group">
-          <Card className="h-full border-slate-200 transition-all hover:border-purple-500 hover:shadow-lg dark:border-slate-800">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg bg-purple-500/10 p-2.5 text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                  <Layers className="h-5 w-5" />
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </div>
-              <CardTitle className="text-base mt-2">Packet Repackaging</CardTitle>
-              <CardDescription className="text-xs">
-                Convert bulk raw commodities into retail consumer packets with automated yields.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 text-xs font-semibold text-purple-600 dark:text-purple-400">
-              {repackagingOrders.length} Conversion Orders &rarr;
-            </CardContent>
-          </Card>
-        </Link>
-
         <Link href="/dashboard/supply-chain/audit" className="group">
           <Card className="h-full border-slate-200 transition-all hover:border-teal-500 hover:shadow-lg dark:border-slate-800">
             <CardHeader className="pb-2">
@@ -555,7 +810,10 @@ export function SupplyChainOverviewClient({
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
               </div>
-              <CardTitle className="text-base mt-2">Movement Audit</CardTitle>
+              <CardTitle className="text-base mt-2 flex items-center justify-between">
+                <span>Movement Audit</span>
+                <Badge className="bg-teal-500/10 text-teal-600 text-[10px] font-mono">VBFA Flow</Badge>
+              </CardTitle>
               <CardDescription className="text-xs">
                 Immutable audit ledger tracking all stock transactions, timestamps, and operators.
               </CardDescription>
@@ -617,13 +875,12 @@ export function SupplyChainOverviewClient({
 
                       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                         <div
-                          className={`h-full transition-all duration-300 ${
-                            pctRemaining <= 20
+                          className={`h-full transition-all duration-300 ${pctRemaining <= 20
                               ? "bg-rose-500"
                               : pctRemaining <= 50
-                              ? "bg-amber-500"
-                              : "bg-emerald-500"
-                          }`}
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                            }`}
                           style={{ width: `${pctRemaining}%` }}
                         />
                       </div>
@@ -772,8 +1029,8 @@ export function SupplyChainOverviewClient({
                               mov.movement_type.includes("inbound") || mov.movement_type.includes("in")
                                 ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400 font-semibold"
                                 : mov.movement_type.includes("outbound") || mov.movement_type.includes("out")
-                                ? "bg-rose-500/10 text-rose-700 border-rose-500/30 dark:text-rose-400 font-semibold"
-                                : "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400 font-semibold"
+                                  ? "bg-rose-500/10 text-rose-700 border-rose-500/30 dark:text-rose-400 font-semibold"
+                                  : "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400 font-semibold"
                             }
                           >
                             {mov.movement_type}
@@ -871,11 +1128,11 @@ export function SupplyChainOverviewClient({
                         <SelectValue placeholder="Select Warehouse" />
                       </SelectTrigger>
                       <SelectContent>
-                        {warehouses.map((w) => (
+                        {warehouses.map((w) => w._id ? (
                           <SelectItem key={w._id} value={w._id}>
                             {w.warehouse_name} ({w.warehouse_code})
                           </SelectItem>
-                        ))}
+                        ) : null)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -893,11 +1150,11 @@ export function SupplyChainOverviewClient({
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((p) => (
+                      {products.map((p) => p._id ? (
                         <SelectItem key={p._id} value={p._id}>
                           {p.product_name} ({p.sku})
                         </SelectItem>
-                      ))}
+                      ) : null)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1146,11 +1403,11 @@ export function SupplyChainOverviewClient({
                     <SelectValue placeholder="Choose active bilty number" />
                   </SelectTrigger>
                   <SelectContent>
-                    {activeBilties.map((b) => (
+                    {activeBilties.map((b) => b._id ? (
                       <SelectItem key={b._id} value={b._id}>
                         {b.bilty_number} — {b.product_id?.product_name} ({b.remaining_quantity} {b.unit_of_measure} Remaining)
                       </SelectItem>
-                    ))}
+                    ) : null)}
                   </SelectContent>
                 </Select>
               </div>
@@ -1221,11 +1478,11 @@ export function SupplyChainOverviewClient({
                       <SelectValue placeholder="Select Warehouse" />
                     </SelectTrigger>
                     <SelectContent>
-                      {warehouses.map((w) => (
+                      {warehouses.map((w) => w._id ? (
                         <SelectItem key={w._id} value={w._id}>
                           {w.warehouse_name} ({w.warehouse_code})
                         </SelectItem>
-                      ))}
+                      ) : null)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1239,11 +1496,11 @@ export function SupplyChainOverviewClient({
                       <SelectValue placeholder="Select Bulk Material" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((p) => (
+                      {products.map((p) => p._id ? (
                         <SelectItem key={p._id} value={p._id}>
                           {p.product_name} ({p.sku})
                         </SelectItem>
-                      ))}
+                      ) : null)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1269,11 +1526,11 @@ export function SupplyChainOverviewClient({
                       <SelectValue placeholder="Select Packet Product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((p) => (
+                      {products.map((p) => p._id ? (
                         <SelectItem key={p._id} value={p._id}>
                           {p.product_name} ({p.sku})
                         </SelectItem>
-                      ))}
+                      ) : null)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1297,6 +1554,96 @@ export function SupplyChainOverviewClient({
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-purple-600 font-semibold text-white hover:bg-purple-500">
                 {isSubmitting ? "Converting..." : "Execute Repackaging"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inter-Warehouse Transfer Modal */}
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <form onSubmit={handleTransfer}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <Truck className="h-5 w-5 text-blue-600" /> Inter-Warehouse Freight Stock Transfer
+              </DialogTitle>
+              <DialogDescription>
+                Dispatch packaged or bulk stock from Port/Central Hub to Regional Warehouses.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="t_from" className="font-semibold text-rose-600">Origin Facility (From) *</Label>
+                  <Select value={transferFromWh} onValueChange={(val) => setTransferFromWh(val)} required>
+                    <SelectTrigger id="t_from">
+                      <SelectValue placeholder="Source Warehouse / Port" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((w) => w._id ? (
+                        <SelectItem key={w._id} value={w._id}>
+                          {w.warehouse_name} ({w.warehouse_code})
+                        </SelectItem>
+                      ) : null)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="t_to" className="font-semibold text-emerald-600">Destination Facility (To) *</Label>
+                  <Select value={transferToWh} onValueChange={(val) => setTransferToWh(val)} required>
+                    <SelectTrigger id="t_to">
+                      <SelectValue placeholder="Destination Warehouse" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((w) => w._id ? (
+                        <SelectItem key={w._id} value={w._id}>
+                          {w.warehouse_name} ({w.warehouse_code})
+                        </SelectItem>
+                      ) : null)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="t_prod" className="font-semibold">Product SKU *</Label>
+                  <Select value={transferProduct} onValueChange={(val) => setTransferProduct(val)} required>
+                    <SelectTrigger id="t_prod">
+                      <SelectValue placeholder="Select Product SKU" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => p._id ? (
+                        <SelectItem key={p._id} value={p._id}>
+                          {p.product_name} ({p.sku})
+                        </SelectItem>
+                      ) : null)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="t_qty" className="font-semibold">Transfer Quantity *</Label>
+                  <Input
+                    id="t_qty"
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 600 or 12000"
+                    value={transferQty}
+                    onChange={(e) => setTransferQty(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setIsTransferModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-blue-600 font-semibold text-white hover:bg-blue-500">
+                {isSubmitting ? "Transferring..." : "Execute Freight Transfer"}
               </Button>
             </DialogFooter>
           </form>

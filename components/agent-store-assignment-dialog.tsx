@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Store, Search, Check, CheckSquare, Square } from "lucide-react";
+import { toastApiError } from "@/lib/utils";
+import { Store, Search, Check, CheckSquare, Square, Loader2 } from "lucide-react";
 
 interface StoreItem {
   _id: string;
@@ -88,12 +89,14 @@ export function AgentStoreAssignmentDialog({
       });
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to update assignments");
         setError(data.error || "Failed to update assignments");
         return;
       }
       setOpen(false);
       router.refresh();
-    } catch {
+    } catch (err: any) {
+      toastApiError(err, "Network error saving assignments");
       setError("Network error saving assignments");
     } finally {
       setLoading(false);
@@ -194,7 +197,14 @@ export function AgentStoreAssignmentDialog({
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={loading || fetching}>
-            {loading ? "Saving Assignments…" : `Save (${selectedStoreIds.length}) Store Assignments`}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving Assignments…
+              </>
+            ) : (
+              `Save (${selectedStoreIds.length}) Store Assignments`
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

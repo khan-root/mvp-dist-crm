@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StoreLocationPickerMap, SelectedLocation } from "@/components/store-location-picker-map";
 import { Badge } from "@/components/ui/badge";
+import { toastApiError } from "@/lib/utils";
 import {
   Store as StoreIcon,
   ArrowLeft,
@@ -23,6 +24,7 @@ import {
   Sparkles,
   CreditCard,
   Building2,
+  Loader2,
 } from "lucide-react";
 
 interface AgentContextData {
@@ -147,7 +149,9 @@ export default function AgentNewStorePage() {
     setLoading(true);
 
     if (!distributor_id || !territory_id) {
-      setError("Distributor and Territory assignment are required.");
+      const msg = "Distributor and Territory assignment are required.";
+      toastApiError(msg);
+      setError(msg);
       setLoading(false);
       return;
     }
@@ -193,6 +197,7 @@ export default function AgentNewStorePage() {
 
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to onboard store");
         setError(data.error || "Failed to onboard store");
         return;
       }
@@ -203,6 +208,7 @@ export default function AgentNewStorePage() {
         router.refresh();
       }, 1200);
     } catch (err: any) {
+      toastApiError(err, "Network error while saving store");
       setError(err?.message || "Network error while saving store");
     } finally {
       setLoading(false);

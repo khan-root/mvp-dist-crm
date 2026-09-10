@@ -12,6 +12,8 @@ import { GlobalGeoFilter, GeoFilterState } from "@/components/global-geo-filter"
 import { matchesProvince } from "@/lib/data/citiesData";
 import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { toast } from "sonner";
+import { toastApiError } from "@/lib/utils";
 
 interface StoreItem {
   _id: string;
@@ -24,14 +26,18 @@ interface StoreItem {
 }
 
 export function StoresClientView({
-  stores = [],
+  initialStores = [],
+  initialTotalRecords = 0,
   agents = [],
   territories = [],
 }: {
-  stores: StoreItem[];
+  initialStores?: StoreItem[];
+  initialTotalRecords?: number;
   agents: any[];
   territories?: any[];
 }) {
+  const [stores, setStores] = useState<StoreItem[]>(initialStores);
+  const [totalRecords, setTotalRecords] = useState<number>(initialTotalRecords || initialStores.length);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -43,6 +49,26 @@ export function StoresClientView({
     distributorId: "all",
     search: "",
   });
+
+  const fetchPage = async (page: number) => {
+    try {
+      const res = await fetch(`/api/stores?page=${page}&limit=${pageSize}`);
+      const data = await res.json();
+      if (res.ok) {
+        setStores(data.data || []);
+        if (typeof data.total === "number") setTotalRecords(data.total);
+      } else {
+        toastApiError(toast, data, "Failed to load stores");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to fetch stores");
+    }
+  };
+
+  const handlePageChange = (p: number) => {
+    setCurrentPage(p);
+    fetchPage(p);
+  };
 
   const filteredStores = stores.filter((s) => {
     // 1. Search
@@ -71,8 +97,7 @@ export function StoresClientView({
     return true;
   });
 
-  const totalPages = Math.ceil(filteredStores.length / pageSize) || 1;
-  const paginatedStores = filteredStores.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
   return (
     <div className="space-y-6 w-full">
@@ -88,11 +113,11 @@ export function StoresClientView({
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
           <div>
-            <CardTitle className="text-xl font-bold text-slate-900">Retail Outlets & Stores ({filteredStores.length})</CardTitle>
+            <CardTitle className="text-xl font-bold text-slate-900">Retail Outlets & Stores ({totalRecords})</CardTitle>
             <CardDescription>Assign field agents for order booking and delivery routes.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <BulkImportDialog entityType="stores" onImportSuccess={() => window.location.reload()} />
+            <BulkImportDialog entityType="stores" onImportSuccess={() => fetchPage(currentPage)} />
             <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs cursor-pointer">
               <Link href="/dashboard/stores/new">
                 <Plus className="size-4" /> Add Store
@@ -102,7 +127,7 @@ export function StoresClientView({
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
           {filteredStores.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-sm">No stores matching your geographic filters.</div>
+            <div className="p-8 text-center text-slate-500 text-sm">No stores match your filter criteria.</div>
           ) : (
             <>
               <Table>
@@ -110,14 +135,14 @@ export function StoresClientView({
                   <TableRow>
                     <TableHead className="font-semibold">Code</TableHead>
                     <TableHead className="font-semibold">Store Name</TableHead>
-                    <TableHead className="font-semibold">Category / Type</TableHead>
+                    <TableHead className="font-semibold">Type</TableHead>
                     <TableHead className="font-semibold">Assigned Agent</TableHead>
-                    <TableHead className="font-semibold">Owner Info</TableHead>
-                    <TableHead className="font-semibold">Location / City</TableHead>
+                    <TableHead className="font-semibold">Owner Contact</TableHead>
+                    <TableHead className="font-semibold">Location</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedStores.map((s) => (
+                  {filteredStores.map((s) => (
                     <TableRow key={s._id} className="hover:bg-slate-50 transition-colors">
                       <TableCell className="font-mono text-xs font-bold text-emerald-700">{s.store_code}</TableCell>
                       <TableCell className="font-semibold text-slate-900">{s.store_name}</TableCell>
@@ -147,8 +172,8 @@ export function StoresClientView({
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page)}
-                totalItems={filteredStores.length}
+                onPageChange={handlePageChange}
+                totalRecords={totalRecords}
                 pageSize={pageSize}
               />
             </>

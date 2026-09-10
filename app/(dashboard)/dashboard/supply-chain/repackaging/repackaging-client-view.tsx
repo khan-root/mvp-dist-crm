@@ -20,10 +20,16 @@ interface RepackagingClientViewProps {
   currentUser: any;
 }
 
+const ensureArray = <T = any,>(data: any): T[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
 const PAGE_SIZE = 10;
 
 export function RepackagingClientView({ initialOrders, warehouses, products, currentUser }: RepackagingClientViewProps) {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState<any[]>(() => ensureArray(initialOrders));
   const [searchTerm, setSearchTerm] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -42,7 +48,9 @@ export function RepackagingClientView({ initialOrders, warehouses, products, cur
   const isWarehouseUser = currentUser?.role_id?.code === "warehouse_manager" || currentUser?.role_id?.code === "warehouse_operator";
   const userWarehouseId = currentUser?.assigned_warehouse_id?._id || currentUser?.assigned_warehouse_id;
 
-  const filteredOrders = orders.filter((ord) => {
+  const safeOrders = ensureArray(orders);
+
+  const filteredOrders = safeOrders.filter((ord) => {
     if (isWarehouseUser && userWarehouseId) {
       if (ord.source_warehouse_id?._id !== userWarehouseId) return false;
     }
@@ -67,7 +75,7 @@ export function RepackagingClientView({ initialOrders, warehouses, products, cur
       const res = await fetch("/api/supply-chain/repackaging");
       if (res.ok) {
         const data = await res.json();
-        setOrders(data);
+        setOrders(ensureArray(data));
       }
     } catch (e) {
       console.error(e);
@@ -95,7 +103,7 @@ export function RepackagingClientView({ initialOrders, warehouses, products, cur
           source_quantity_used: Number(sourceQuantity),
           target_product_id: targetProductId,
           target_quantity_produced: Number(targetQuantity),
-          operator_name: operatorName || currentUser?.name,
+          operator_name: operatorName || "Packaging Tech",
         }),
       });
 
@@ -117,8 +125,8 @@ export function RepackagingClientView({ initialOrders, warehouses, products, cur
     }
   };
 
-  const totalConvertedVolume = orders.reduce((sum, o) => sum + (o.source_quantity_used || 0), 0);
-  const totalProducedUnits = orders.reduce((sum, o) => sum + (o.target_quantity_produced || 0), 0);
+  const totalConvertedVolume = safeOrders.reduce((sum, o) => sum + (o.source_quantity_used || 0), 0);
+  const totalProducedUnits = safeOrders.reduce((sum, o) => sum + (o.target_quantity_produced || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -170,8 +178,8 @@ export function RepackagingClientView({ initialOrders, warehouses, products, cur
       </div>
 
       {/* Filter Toolbar */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="shadow-xs border-slate-200/90 dark:border-slate-800">
+        <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

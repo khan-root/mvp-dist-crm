@@ -9,9 +9,17 @@ interface PermissionGuardProps {
   module: string;
   action?: "read" | "write" | "update" | "delete" | "create";
   children: React.ReactNode;
+  fallback?: React.ReactNode;
+  hideIfNoAccess?: boolean;
 }
 
-export function PermissionGuard({ module, action = "read", children }: PermissionGuardProps) {
+export function PermissionGuard({
+  module,
+  action = "read",
+  children,
+  fallback,
+  hideIfNoAccess,
+}: PermissionGuardProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +34,9 @@ export function PermissionGuard({ module, action = "read", children }: Permissio
   }, []);
 
   if (loading) {
+    if (action !== "read" || hideIfNoAccess || fallback !== undefined) {
+      return null;
+    }
     return (
       <div className="p-12 text-center text-slate-500 text-sm flex items-center justify-center gap-2">
         <Lock className="size-4 animate-pulse text-emerald-500" />
@@ -50,6 +61,12 @@ export function PermissionGuard({ module, action = "read", children }: Permissio
     (modulePerm.actions?.includes(action) || modulePerm.actions?.includes("all"));
 
   if (!hasPermission) {
+    if (fallback !== undefined) {
+      return <>{fallback}</>;
+    }
+    if (hideIfNoAccess || action !== "read") {
+      return null;
+    }
     return (
       <div className="p-8 max-w-2xl mx-auto my-12 text-center space-y-6 bg-slate-900/90 text-white rounded-2xl border border-rose-500/30 shadow-2xl backdrop-blur-xl">
         <div className="size-16 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center border border-rose-500/30">

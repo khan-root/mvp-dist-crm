@@ -16,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Store as StoreIcon, ShoppingCart, Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Store as StoreIcon, ShoppingCart, Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
 
 interface Product {
   _id: string;
@@ -261,11 +263,17 @@ export default function AgentPlaceOrderPage() {
             {error && <p className="text-sm text-rose-600 font-medium">{error}</p>}
           </CardContent>
 
-          <CardFooter>
-            <Button type="submit" disabled={loading || fetching || products.length === 0 || stores.length === 0}>
-              {loading ? "Placing Order…" : "Submit Order to Distributor"}
+          <CardFooter className="flex items-center gap-3">
+            <Button type="submit" disabled={loading || fetching || products.length === 0 || stores.length === 0} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="size-4 animate-spin" /> Placing Order...
+                </span>
+              ) : (
+                "Submit Order to Distributor"
+              )}
             </Button>
-            <Button type="button" variant="outline" asChild>
+            <Button type="button" variant="outline" asChild disabled={loading}>
               <Link href="/agent">Cancel</Link>
             </Button>
           </CardFooter>

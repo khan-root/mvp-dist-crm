@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CITIES_DATA } from "@/lib/data/citiesData";
-import { Building2, Globe2, ShieldCheck, MapPin, CreditCard, ArrowLeft } from "lucide-react";
+import { toastApiError } from "@/lib/utils";
+import { Building2, Globe2, ShieldCheck, MapPin, CreditCard, ArrowLeft, Loader2 } from "lucide-react";
 
 const INDUSTRY_DOMAINS = [
   { value: "fmcg", label: "FMCG / Packaged Consumer Goods" },
@@ -119,12 +120,14 @@ export default function NewDistributorPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to create distributor");
         setError(data.error || "Failed to create distributor");
         return;
       }
       router.push("/dashboard/distributors");
       router.refresh();
-    } catch {
+    } catch (err: any) {
+      toastApiError(err, "Network error occurred");
       setError("Network error occurred");
     } finally {
       setLoading(false);
@@ -440,7 +443,14 @@ export default function NewDistributorPage() {
               <Link href="/dashboard/distributors">Cancel</Link>
             </Button>
             <Button type="submit" disabled={loading} className="min-w-[140px]">
-              {loading ? "Saving Hub…" : "Create Distributor Hub"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Hub…
+                </>
+              ) : (
+                "Create Distributor Hub"
+              )}
             </Button>
           </CardFooter>
         </Card>

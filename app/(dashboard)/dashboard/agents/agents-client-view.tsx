@@ -11,6 +11,9 @@ import { matchesProvince } from "@/lib/data/citiesData";
 import { BulkImportDialog } from "@/components/bulk-import-dialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
+import { toast } from "sonner";
+import { toastApiError } from "@/lib/utils";
+
 interface AgentItem {
   _id: string;
   agent_code: string;
@@ -20,7 +23,15 @@ interface AgentItem {
   address?: { city?: string; state?: string; province?: string };
 }
 
-export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
+export function AgentsClientView({
+  initialAgents = [],
+  initialTotalRecords = 0,
+}: {
+  initialAgents?: AgentItem[];
+  initialTotalRecords?: number;
+}) {
+  const [agents, setAgents] = useState<AgentItem[]>(initialAgents);
+  const [totalRecords, setTotalRecords] = useState<number>(initialTotalRecords || initialAgents.length);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -32,6 +43,26 @@ export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
     distributorId: "all",
     search: "",
   });
+
+  const fetchPage = async (page: number) => {
+    try {
+      const res = await fetch(`/api/agents?page=${page}&limit=${pageSize}`);
+      const data = await res.json();
+      if (res.ok) {
+        setAgents(data.data || []);
+        if (typeof data.total === "number") setTotalRecords(data.total);
+      } else {
+        toastApiError(toast, data, "Failed to load agents");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to fetch agents");
+    }
+  };
+
+  const handlePageChange = (p: number) => {
+    setCurrentPage(p);
+    fetchPage(p);
+  };
 
   const filteredAgents = agents.filter((a) => {
     // 1. Search
@@ -62,8 +93,7 @@ export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
     return true;
   });
 
-  const totalPages = Math.ceil(filteredAgents.length / pageSize) || 1;
-  const paginatedAgents = filteredAgents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
   return (
     <div className="space-y-6 w-full">
@@ -78,11 +108,11 @@ export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
           <div>
-            <CardTitle className="text-xl font-bold text-slate-900">Field Agents & Sales Fleet ({filteredAgents.length})</CardTitle>
+            <CardTitle className="text-xl font-bold text-slate-900">Field Agents & Sales Fleet ({totalRecords})</CardTitle>
             <CardDescription>Field booking representatives operating across assigned distributor territories.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <BulkImportDialog entityType="agents" onImportSuccess={() => window.location.reload()} />
+            <BulkImportDialog entityType="agents" onImportSuccess={() => fetchPage(currentPage)} />
             <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-xs cursor-pointer">
               <Link href="/dashboard/agents/new">
                 <Plus className="size-4" /> Add Agent
@@ -106,7 +136,7 @@ export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedAgents.map((a) => (
+                  {filteredAgents.map((a) => (
                     <TableRow key={a._id} className="hover:bg-slate-50 transition-colors">
                       <TableCell className="font-mono text-xs font-bold text-emerald-700">{a.agent_code}</TableCell>
                       <TableCell className="font-semibold text-slate-900">
@@ -131,8 +161,8 @@ export function AgentsClientView({ agents = [] }: { agents: AgentItem[] }) {
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={(page) => setCurrentPage(page)}
-                totalItems={filteredAgents.length}
+                onPageChange={handlePageChange}
+                totalRecords={totalRecords}
                 pageSize={pageSize}
               />
             </>

@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Compass, Search, Check, CheckSquare, Square, MapPin } from "lucide-react";
+import { toastApiError } from "@/lib/utils";
+import { Compass, Search, Check, CheckSquare, Square, MapPin, Loader2 } from "lucide-react";
 
 interface RouteItem {
   _id: string;
@@ -87,12 +88,14 @@ export function AgentRouteAssignmentDialog({
       });
       const data = await res.json();
       if (!res.ok) {
+        toastApiError(data, "Failed to update route assignments");
         setError(data.error || "Failed to update route assignments");
         return;
       }
       setOpen(false);
       router.refresh();
-    } catch {
+    } catch (err: any) {
+      toastApiError(err, "Network error saving route assignments");
       setError("Network error saving route assignments");
     } finally {
       setLoading(false);
@@ -193,7 +196,14 @@ export function AgentRouteAssignmentDialog({
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={loading || fetching}>
-            {loading ? "Saving Route Assignments…" : `Save (${selectedRouteIds.length}) Route Assignments`}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving Route Assignments…
+              </>
+            ) : (
+              `Save (${selectedRouteIds.length}) Route Assignments`
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

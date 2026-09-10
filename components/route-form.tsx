@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RouteLeafletMap, LatLngPoint, StorePoint } from "@/components/route-leaflet-map";
-import { Compass, MapPin, CheckCircle2 } from "lucide-react";
+import { Compass, MapPin, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage, toastApiError } from "@/lib/utils";
 
 interface TerritoryOption {
   _id: string;
@@ -260,11 +262,17 @@ export function RouteForm({
             {error && <p className="text-sm text-rose-600 font-medium">{error}</p>}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creating Route…" : "Create Route & Save Mapping"}
+              <Button type="submit" disabled={loading} className="bg-slate-900 hover:bg-slate-800 text-white font-bold cursor-pointer">
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" /> Creating Route...
+                  </span>
+                ) : (
+                  "Create Route & Save Mapping"
+                )}
               </Button>
             </DialogFooter>
           </form>
