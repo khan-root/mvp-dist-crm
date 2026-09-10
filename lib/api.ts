@@ -5,13 +5,21 @@ const API_BASE = "";
  * Uses VERCEL_URL on Vercel (set automatically), otherwise NEXT_PUBLIC_APP_URL or localhost.
  */
 export function getServerApiBaseUrl(): string {
+  // 1. Local Development (npm run dev): Always use localhost
+  if (process.env.NODE_ENV === "development") {
+    const port = process.env.PORT || "3000";
+    return process.env.LOCAL_APP_URL || `http://localhost:${port}`;
+  }
+
+  // 2. Vercel Production Deployments (set automatically by Vercel)
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  if (process.env.NODE_ENV === "development") {
-    const port = process.env.PORT || "3000";
-    return `http://localhost:${port}`;
-  }
+
+  // 3. Fallback for self-hosted production
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }
 
