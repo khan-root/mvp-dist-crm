@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import { TransportBilty } from "@/lib/models";
 import { requireSession } from "@/lib/auth";
+import { getFacilityScopeFilter } from "@/lib/user";
 
 export async function GET(request: Request) {
   try {
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
     const product_id = searchParams.get("product_id");
     const status = searchParams.get("status");
 
-    const query: any = { tenant_id: session.tenantId };
+    const scopeFilter = await getFacilityScopeFilter(session.userId, session.tenantId, "warehouse_id");
+    const query: any = { ...scopeFilter };
     if (warehouse_id) query.warehouse_id = warehouse_id;
     if (product_id) query.product_id = product_id;
     if (status) query.status = status;

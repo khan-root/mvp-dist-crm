@@ -154,7 +154,7 @@ export function OutboundClientView({
           </div>
 
           <div className="flex items-center gap-2">
-            <PermissionGuard module="inventory" action="create">
+            <PermissionGuard module={["dispatch", "supply_chain", "inventory"]} action="create">
               <Button
                 onClick={() => setIsModalOpen(true)}
                 className="bg-amber-600 font-semibold text-white hover:bg-amber-500 shadow-lg shadow-amber-900/40 text-xs sm:text-sm"

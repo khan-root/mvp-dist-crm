@@ -6,6 +6,8 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ShipmentsClientView } from "./shipments-client-view";
 
+import { getFacilityScopeFilter } from "@/lib/user";
+
 export const metadata = {
   title: "Inbound Cargo Shipments | RoutePro CRM",
   description: "Record inbound cargo arrivals, split bulk tonnage across transporter bilties, and log warehouse receipts.",
@@ -17,8 +19,10 @@ export default async function ShipmentsPage() {
 
   await dbConnect();
 
+  const shipmentFilter = await getFacilityScopeFilter(session.userId, session.tenantId, "warehouse_id");
+
   const [portShipments, warehouses, products, currentUser] = await Promise.all([
-    PortShipment.find({ tenant_id: session.tenantId })
+    PortShipment.find(shipmentFilter)
       .populate("warehouse_id", "warehouse_name warehouse_code")
       .populate("product_id", "product_name sku unit_of_measure")
       .populate("created_by", "name email")

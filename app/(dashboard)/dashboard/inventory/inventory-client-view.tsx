@@ -32,6 +32,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
+import { PermissionGuard } from "@/components/permission-guard";
+
 interface InventoryItem {
   _id: string;
   product_name: string;
@@ -172,7 +174,8 @@ export function InventoryClientView({
   }
 
   return (
-    <div className="space-y-6 w-full">
+    <PermissionGuard module="inventory">
+      <div className="space-y-6 w-full">
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -515,6 +518,7 @@ export function InventoryClientView({
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

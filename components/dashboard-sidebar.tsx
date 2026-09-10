@@ -54,14 +54,14 @@ interface NavSubItem {
   title: string;
   href: string;
   icon: any;
-  module?: string;
+  module?: string | string[];
 }
 
 interface NavItem {
   title: string;
   href?: string;
   icon: any;
-  module?: string;
+  module?: string | string[];
   subItems?: NavSubItem[];
 }
 
@@ -113,14 +113,14 @@ const rawNavGroups: NavGroup[] = [
         title: "Supply Chain & Logistics",
         icon: Ship,
         subItems: [
-          { title: "SAP SCM Control Tower", href: "/dashboard/supply-chain", icon: Ship, module: "inventory" },
-          { title: "Inbound Goods Receipt (MvT 101)", href: "/dashboard/supply-chain/shipments", icon: Boxes, module: "inventory" },
-          { title: "Packaging Yield (MvT 261/309)", href: "/dashboard/supply-chain/repackaging", icon: Package, module: "inventory" },
-          { title: "Stock Transfers (MvT 351/641)", href: "/dashboard/supply-chain/transfers", icon: Truck, module: "inventory" },
-          { title: "Outbound Dispatch (MvT 601)", href: "/dashboard/supply-chain/outbound", icon: ShoppingCart, module: "inventory" },
-          { title: "Transport Bilties (TM)", href: "/dashboard/supply-chain/bilties", icon: FileSpreadsheet, module: "inventory" },
-          { title: "Fleet & Carrier Vehicles (TM)", href: "/dashboard/supply-chain/vehicles", icon: Truck, module: "inventory" },
-          { title: "Movement Audit Trail (VBFA)", href: "/dashboard/supply-chain/audit", icon: History, module: "inventory" },
+          { title: "SAP SCM Control Tower", href: "/dashboard/supply-chain", icon: Ship, module: "supply_chain" },
+          { title: "Inbound Goods Receipt (MvT 101)", href: "/dashboard/supply-chain/shipments", icon: Boxes, module: "supply_chain" },
+          { title: "Packaging Yield (MvT 261/309)", href: "/dashboard/supply-chain/repackaging", icon: Package, module: "repackaging" },
+          { title: "Stock Transfers (MvT 351/641)", href: "/dashboard/supply-chain/transfers", icon: Truck, module: "supply_chain" },
+          { title: "Outbound Dispatch (MvT 601)", href: "/dashboard/supply-chain/outbound", icon: ShoppingCart, module: "dispatch" },
+          { title: "Transport Bilties (TM)", href: "/dashboard/supply-chain/bilties", icon: FileSpreadsheet, module: "supply_chain" },
+          { title: "Fleet & Carrier Vehicles (TM)", href: "/dashboard/supply-chain/vehicles", icon: Truck, module: "supply_chain" },
+          { title: "Movement Audit Trail (VBFA)", href: "/dashboard/supply-chain/audit", icon: History, module: "supply_chain" },
         ],
       },
     ],
@@ -207,6 +207,7 @@ export function DashboardSidebar({
     "Orders & Fulfillment": true,
     "Territories & Routes": true,
     "Stock & Warehousing": true,
+    "Supply Chain & Logistics": true,
     "Distribution Hubs": true,
     "Field Force Fleet": true,
     "Outlets & Retail": true,
@@ -236,15 +237,25 @@ export function DashboardSidebar({
   }
 
   // Filter menu items by permissions
-  function isAllowed(moduleName?: string) {
+  function isAllowed(moduleName?: string | string[]) {
     if (!moduleName) return true;
     if (!currentUser) return true; // Show all while fetching/default
     if (currentUser.role_code === "admin") return true;
     if (!currentUser.permissions || !currentUser.permissions.modules) return true;
     const modules: any[] = currentUser.permissions.modules;
-    const mod = modules.find((m) => m.module_name === moduleName || m.module_name === "all");
-    if (!mod) return false;
-    return mod.actions?.includes("read") || mod.actions?.includes("all");
+    const targets = Array.isArray(moduleName) ? moduleName : [moduleName];
+    return targets.some((target) => {
+      const mod = modules.find((m) => m.module_name === target || m.module_name === "all");
+      if (!mod) return false;
+      return (
+        mod.actions?.includes("read") ||
+        mod.actions?.includes("write") ||
+        mod.actions?.includes("update") ||
+        mod.actions?.includes("delete") ||
+        mod.actions?.includes("all") ||
+        (mod.actions && mod.actions.length > 0)
+      );
+    });
   }
 
   const navGroups = rawNavGroups

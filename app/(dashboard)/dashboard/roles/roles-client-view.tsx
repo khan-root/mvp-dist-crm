@@ -35,6 +35,7 @@ import {
   Boxes,
   Truck,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { PermissionGuard } from "@/components/permission-guard";
 
@@ -353,6 +354,103 @@ export function RolesClientView({
     }
   }
 
+  // Edit Role Modal state
+  const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editRoleName, setEditRoleName] = useState("");
+  const [editRoleCode, setEditRoleCode] = useState("");
+  const [editRoleDesc, setEditRoleDesc] = useState("");
+  const [editRolePermissions, setEditRolePermissions] = useState<Record<string, string[]>>({});
+  const [updatingRole, setUpdatingRole] = useState(false);
+
+  function openEditRoleModal(role: RoleData) {
+    setEditingRoleId(role._id);
+    setEditRoleName(role.name || "");
+    setEditRoleCode(role.code || "");
+    setEditRoleDesc(role.description || "");
+
+    const permMap: Record<string, string[]> = {};
+    if (role.permissions?.modules) {
+      role.permissions.modules.forEach((m) => {
+        permMap[m.module_name] = m.actions || [];
+      });
+    }
+    setEditRolePermissions(permMap);
+    setEditRoleModalOpen(true);
+  }
+
+  async function handleUpdateRole(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingRoleId) return;
+
+    setUpdatingRole(true);
+    setFeedback(null);
+
+    const formattedModules = Object.entries(editRolePermissions)
+      .filter(([_, actions]) => actions.length > 0)
+      .map(([modKey, actions]) => ({
+        module_name: modKey,
+        actions,
+      }));
+
+    try {
+      const res = await fetch(`/api/roles/${editingRoleId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: editRoleName.trim(),
+          code: editRoleCode.trim(),
+          description: editRoleDesc.trim(),
+          permissions: {
+            modules: formattedModules,
+          },
+        }),
+      });
+
+      const d = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: "error", text: d.error || "Failed to update role" });
+        return;
+      }
+
+      setEditRoleModalOpen(false);
+      setEditingRoleId(null);
+      setFeedback({ type: "success", text: `Role "${d.data.name}" updated successfully!` });
+
+      // Refresh roles
+      const refRes = await fetch("/api/roles", { credentials: "include" });
+      const refData = await refRes.json();
+      if (refData.data) setStoreRoles(refData.data);
+    } catch {
+      setFeedback({ type: "error", text: "Network error updating role" });
+    } finally {
+      setUpdatingRole(false);
+    }
+  }
+
+  async function handleDeleteRole(roleId: string, roleName: string) {
+    if (!confirm(`Are you sure you want to delete role "${roleName}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/roles/${roleId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: "error", text: d.error || "Failed to delete role" });
+        return;
+      }
+      setFeedback({ type: "success", text: `Role "${roleName}" deleted.` });
+      const refRes = await fetch("/api/roles", { credentials: "include" });
+      const refData = await refRes.json();
+      if (refData.data) setStoreRoles(refData.data);
+    } catch {
+      setFeedback({ type: "error", text: "Error deleting role" });
+    }
+  }
+
   return (
     <PermissionGuard module="roles">
       <div className="space-y-8 w-full">
@@ -622,44 +720,82 @@ export function RolesClientView({
 
           {/* TAB 1: ROLES & PERMISSIONS MATRIX */}
           <TabsContent value="roles" className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {roles.map((r) => {
-                const modulesList = r.permissions?.modules || [];
-                return (
-                  <Card key={r._id} className="border-slate-200 shadow-xs flex flex-col justify-between">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base font-bold text-slate-900">{r.name}</CardTitle>
-                        <Badge variant="outline" className="font-mono text-[10px] bg-slate-50">
-                          {r.code}
-                        </Badge>
-                      </div>
-                      <CardDescription className="text-xs mt-1">
-                        {r.description || "Custom role with specific module authority."}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-xs pt-0">
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                        <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">
-                          Authorized Modules ({modulesList.length})
-                        </span>
-                        {modulesList.length === 0 ? (
-                          <p className="text-slate-500">No permissions configured.</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {modulesList.map((m) => (
-                              <Badge key={m.module_name} variant="secondary" className="text-[10px] capitalize">
-                                {m.module_name.replace("_", " ")} ({m.actions.join(", ")})
+            <Card className="border-slate-200 shadow-xs">
+              <CardContent className="p-0">
+                {roles.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 text-sm">No defined roles found. Create a custom role to configure access control.</div>
+                ) : (
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="font-semibold">Role Name</TableHead>
+                        <TableHead className="font-semibold">System Code</TableHead>
+                        <TableHead className="font-semibold">Description</TableHead>
+                        <TableHead className="font-semibold">Authorized Modules & Actions</TableHead>
+                        <TableHead className="text-right font-semibold">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {roles.map((r) => {
+                        const modulesList = r.permissions?.modules || [];
+                        return (
+                          <TableRow key={r._id} className="hover:bg-slate-50 transition-colors">
+                            <TableCell className="font-bold text-slate-900 flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
+                              {r.name}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs bg-slate-50 text-slate-700">
+                                {r.code}
                               </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 max-w-xs">
+                              {r.description || "Custom role with specific module authority."}
+                            </TableCell>
+                            <TableCell>
+                              {modulesList.length === 0 ? (
+                                <span className="text-xs text-slate-400 italic">No permissions configured</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5 max-w-md">
+                                  {modulesList.map((m) => (
+                                    <Badge key={m.module_name} variant="secondary" className="text-[10px] capitalize bg-slate-100 text-slate-800 border-slate-200">
+                                      <strong className="text-emerald-700 mr-1">{m.module_name.replace("_", " ")}:</strong> {m.actions.join(", ")}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2.5 text-xs gap-1 border-slate-300 hover:bg-slate-100 cursor-pointer"
+                                  onClick={() => openEditRoleModal(r)}
+                                >
+                                  <Pencil className="w-3.5 h-3.5 text-slate-600" />
+                                  Edit Role
+                                </Button>
+                                {!r.is_default && r.code !== "admin" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                    onClick={() => handleDeleteRole(r._id, r.name)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* TAB 2: TEAM MANAGERS & USERS */}
@@ -816,6 +952,102 @@ export function RolesClientView({
                 </Button>
                 <Button type="submit" disabled={updatingUser} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                   {updatingUser ? "Saving Changes…" : "Update Account"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit RBAC Role Dialog */}
+        <Dialog open={editRoleModalOpen} onOpenChange={setEditRoleModalOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <Pencil className="w-5 h-5 text-emerald-600" />
+                Edit RBAC Role & Permissions Matrix
+              </DialogTitle>
+              <DialogDescription>
+                Modify role details and module permissions for this supply chain authority scope.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleUpdateRole} className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_role_name">Role Title *</Label>
+                  <Input
+                    id="edit_role_name"
+                    placeholder="e.g. Warehouse Manager - Multan"
+                    value={editRoleName}
+                    onChange={(e) => setEditRoleName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_role_code">Role System Code *</Label>
+                  <Input
+                    id="edit_role_code"
+                    placeholder="e.g. warehouse_manager_multan"
+                    value={editRoleCode}
+                    onChange={(e) => setEditRoleCode(e.target.value)}
+                    required
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit_role_desc">Role Description</Label>
+                <Input
+                  id="edit_role_desc"
+                  placeholder="Role description"
+                  value={editRoleDesc}
+                  onChange={(e) => setEditRoleDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <Label className="font-bold text-sm">Module Action Permissions Matrix</Label>
+                <div className="border rounded-xl divide-y bg-slate-50/50 overflow-hidden">
+                  {MODULE_DEFINITIONS.map((m) => {
+                    const currentActions = editRolePermissions[m.key] || [];
+                    return (
+                      <div key={m.key} className="p-3 flex items-center justify-between gap-4 hover:bg-slate-100/50 transition-colors">
+                        <span className="text-xs font-semibold text-slate-800">{m.label}</span>
+                        <div className="flex items-center gap-4">
+                          {ACTIONS.map((act) => {
+                            const checked = currentActions.includes(act);
+                            return (
+                              <label key={act} className="flex items-center gap-1.5 text-xs text-slate-600 capitalize cursor-pointer font-medium">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(val) => {
+                                    const next = val
+                                      ? [...currentActions, act]
+                                      : currentActions.filter((a) => a !== act);
+                                    setEditRolePermissions({
+                                      ...editRolePermissions,
+                                      [m.key]: next,
+                                    });
+                                  }}
+                                />
+                                {act}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditRoleModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updatingRole} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                  {updatingRole ? "Saving Changes…" : "Update Role & Permissions"}
                 </Button>
               </DialogFooter>
             </form>

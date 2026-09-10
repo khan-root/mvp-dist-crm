@@ -169,7 +169,7 @@ export function BiltiesClientView({
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
-            <PermissionGuard module="inventory" action="create">
+            <PermissionGuard module={["supply_chain", "inventory"]} action="create">
               <Button
                 onClick={() => setIsTransferModalOpen(true)}
                 className="bg-blue-600 font-semibold text-white hover:bg-blue-500 text-xs sm:text-sm"

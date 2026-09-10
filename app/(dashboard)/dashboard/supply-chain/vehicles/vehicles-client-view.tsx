@@ -157,9 +157,9 @@ export function VehiclesClientView({ initialVehicles, warehouses, currentUser }:
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
-            <PermissionGuard module="inventory" action="create">
-              <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 font-semibold text-white hover:bg-blue-500 text-xs sm:text-sm">
-                <Plus className="mr-1.5 sm:mr-2 h-4 w-4" /> Register Vehicle
+            <PermissionGuard module={["supply_chain", "inventory"]} action="create">
+              <Button onClick={() => setIsModalOpen(true)} className="bg-emerald-600 font-semibold text-white hover:bg-emerald-500 text-xs sm:text-sm">
+                <Plus className="mr-1.5 sm:mr-2 h-4 w-4" /> Add Vehicle
               </Button>
             </PermissionGuard>
           </div>

@@ -15,6 +15,8 @@ import { toast } from "sonner";
 
 import { toastApiError } from "@/lib/utils";
 
+import { PermissionGuard } from "@/components/permission-guard";
+
 interface WarehouseItem {
   _id: string;
   warehouse_code: string;
@@ -163,7 +165,8 @@ export function WarehousesClientView({
   const tempControlledCount = warehouses.filter((w) => w.capacity?.temperature_controlled).length;
 
   return (
-    <div className="space-y-6 w-full">
+    <PermissionGuard module="inventory">
+      <div className="space-y-6 w-full">
       {/* Top Banner & Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 text-white shadow-md">
         <div className="space-y-1">
@@ -511,6 +514,7 @@ export function WarehousesClientView({
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PermissionGuard>
   );
 }

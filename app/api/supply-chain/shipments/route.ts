@@ -3,6 +3,7 @@ import { z } from "zod";
 import { dbConnect } from "@/lib/db";
 import { PortShipment, Inventory, StockMovement, TransportBilty } from "@/lib/models";
 import { requireSession } from "@/lib/auth";
+import { getFacilityScopeFilter } from "@/lib/user";
 
 const BiltyInputSchema = z.object({
   bilty_number: z.string().min(1),
@@ -29,7 +30,8 @@ export async function GET() {
     const session = await requireSession();
     await dbConnect();
 
-    const shipments = await PortShipment.find({ tenant_id: session.tenantId })
+    const scopeFilter = await getFacilityScopeFilter(session.userId, session.tenantId, "warehouse_id");
+    const shipments = await PortShipment.find(scopeFilter)
       .populate("warehouse_id", "warehouse_name warehouse_code")
       .populate("product_id", "product_name sku unit_of_measure")
       .populate("created_by", "name email")

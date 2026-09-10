@@ -178,7 +178,7 @@ export function TransfersClientView({
           </div>
 
           <div className="flex items-center gap-2">
-            <PermissionGuard module="inventory" action="create">
+            <PermissionGuard module={["supply_chain", "inventory"]} action="create">
               <Button
                 onClick={() => setIsTransferModalOpen(true)}
                 className="bg-blue-600 font-semibold text-white hover:bg-blue-500 shadow-lg shadow-blue-900/40 text-xs sm:text-sm"

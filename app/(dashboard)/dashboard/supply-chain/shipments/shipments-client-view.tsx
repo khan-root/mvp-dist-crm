@@ -195,7 +195,7 @@ export function ShipmentsClientView({ initialShipments, warehouses, products, cu
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
-            <PermissionGuard module="inventory" action="create">
+            <PermissionGuard module={["supply_chain", "inventory"]} action="create">
               <Button onClick={() => setIsModalOpen(true)} className="bg-emerald-600 font-semibold text-white hover:bg-emerald-500 text-xs sm:text-sm">
                 <Plus className="mr-1.5 sm:mr-2 h-4 w-4" /> Record Cargo
               </Button>

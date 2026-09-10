@@ -74,3 +74,52 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return null;
   }
 }
+
+/**
+ * Returns a MongoDB query filter object to enforce facility/warehouse scoping per user role.
+ * - System Admin: Sees all records across the tenant.
+ * - Scoped Port/Warehouse Admin: Sees records linked to their assigned_warehouse_id or created by them.
+ */
+export async function getFacilityScopeFilter(
+  sessionUserId: string,
+  tenantId: string,
+  warehouseField: string = "warehouse_id"
+) {
+  await dbConnect();
+  const user = await User.findById(sessionUserId).populate("role_id", "code").lean();
+  const roleCode = (user?.role_id as any)?.code || "admin";
+
+  if (roleCode === "admin") {
+    return { tenant_id: tenantId };
+  }
+
+  const assignedWhId = user?.assigned_warehouse_id;
+  if (assignedWhId) {
+    if (warehouseField === "movements") {
+      return {
+        tenant_id: tenantId,
+        $or: [
+          { from_warehouse: assignedWhId },
+          { to_warehouse: assignedWhId },
+          { created_by: sessionUserId },
+        ],
+      };
+    }
+    if (warehouseField === "repackaging") {
+      return {
+        tenant_id: tenantId,
+        $or: [
+          { source_warehouse_id: assignedWhId },
+          { target_warehouse_id: assignedWhId },
+          { created_by: sessionUserId },
+        ],
+      };
+    }
+    return {
+      tenant_id: tenantId,
+      $or: [{ [warehouseField]: assignedWhId }, { created_by: sessionUserId }],
+    };
+  }
+
+  return { tenant_id: tenantId, created_by: sessionUserId };
+}

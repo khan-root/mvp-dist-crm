@@ -6,6 +6,8 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { TransfersClientView } from "./transfers-client-view";
 
+import { getFacilityScopeFilter } from "@/lib/user";
+
 export const metadata = {
   title: "Stock Transfer Orders (STO MvT 351/641) | RoutePro CRM",
   description: "Manage inter-warehouse stock transfers, in-transit cargo, transport bilty deductions, and SAP movement types.",
@@ -17,8 +19,12 @@ export default async function TransfersPage() {
 
   await dbConnect();
 
+  const movementFilter = await getFacilityScopeFilter(session.userId, session.tenantId, "movements");
+  const biltyFilter = await getFacilityScopeFilter(session.userId, session.tenantId, "warehouse_id");
+  const vehicleFilter = await getFacilityScopeFilter(session.userId, session.tenantId, "warehouse_id");
+
   const [stockMovements, warehouses, products, transportBilties, vehicles, currentUser] = await Promise.all([
-    StockMovement.find({ tenant_id: session.tenantId })
+    StockMovement.find(movementFilter)
       .populate("from_warehouse", "warehouse_name warehouse_code")
       .populate("to_warehouse", "warehouse_name warehouse_code")
       .populate("product_id", "product_name sku unit_of_measure")
@@ -28,12 +34,12 @@ export default async function TransfersPage() {
       .lean(),
     Warehouse.find({ tenant_id: session.tenantId, is_active: true }).select("warehouse_name warehouse_code address").lean(),
     Product.find({ tenant_id: session.tenantId }).select("product_name sku unit_of_measure").lean(),
-    TransportBilty.find({ tenant_id: session.tenantId })
+    TransportBilty.find(biltyFilter)
       .populate("warehouse_id", "warehouse_name warehouse_code")
       .populate("product_id", "product_name sku unit_of_measure")
       .sort({ created_at: -1 })
       .lean(),
-    DeliveryVehicle.find({ tenant_id: session.tenantId, is_active: true }).select("vehicle_number vehicle_type driver_name transporter_company capacity_tons status").lean(),
+    DeliveryVehicle.find({ ...vehicleFilter, is_active: true }).select("vehicle_number vehicle_type driver_name transporter_company capacity_tons status").lean(),
     User.findById(session.userId).populate("role_id", "name code").populate("assigned_warehouse_id", "warehouse_name warehouse_code").lean(),
   ]);
 

@@ -152,7 +152,7 @@ export function RepackagingClientView({ initialOrders, warehouses, products, cur
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
-            <PermissionGuard module="inventory" action="create">
+            <PermissionGuard module={["repackaging", "supply_chain", "inventory"]} action="create">
               <Button onClick={() => setIsModalOpen(true)} className="bg-purple-600 font-semibold text-white hover:bg-purple-500 text-xs sm:text-sm">
                 <Plus className="mr-1.5 sm:mr-2 h-4 w-4" /> New Repackaging
               </Button>

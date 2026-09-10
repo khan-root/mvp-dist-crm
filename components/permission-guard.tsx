@@ -6,7 +6,7 @@ import { ShieldAlert, ArrowLeft, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PermissionGuardProps {
-  module: string;
+  module: string | string[];
   action?: "read" | "write" | "update" | "delete" | "create";
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -52,13 +52,31 @@ export function PermissionGuard({
 
   // Check permissions array
   const userModules = user.permissions?.modules || [];
-  const modulePerm = userModules.find(
-    (m: any) => m.module_name === module || m.module_name === "all"
-  );
+  const modulesToCheck = Array.isArray(module) ? module : [module];
 
-  const hasPermission =
-    modulePerm &&
-    (modulePerm.actions?.includes(action) || modulePerm.actions?.includes("all"));
+  const hasPermission = modulesToCheck.some((modKey) => {
+    const modulePerm = userModules.find(
+      (m: any) => m.module_name === modKey || m.module_name === "all"
+    );
+    if (!modulePerm || !modulePerm.actions) return false;
+
+    if (action === "read") {
+      return modulePerm.actions.length > 0;
+    }
+
+    if (action === "create" || action === "write") {
+      return (
+        modulePerm.actions.includes("write") ||
+        modulePerm.actions.includes("update") ||
+        modulePerm.actions.includes("create") ||
+        modulePerm.actions.includes("all")
+      );
+    }
+
+    return (
+      modulePerm.actions.includes(action) || modulePerm.actions.includes("all")
+    );
+  });
 
   if (!hasPermission) {
     if (fallback !== undefined) {
@@ -67,6 +85,7 @@ export function PermissionGuard({
     if (hideIfNoAccess || action !== "read") {
       return null;
     }
+    const displayModule = Array.isArray(module) ? module.join(" / ") : module;
     return (
       <div className="p-8 max-w-2xl mx-auto my-12 text-center space-y-6 bg-slate-900/90 text-white rounded-2xl border border-rose-500/30 shadow-2xl backdrop-blur-xl">
         <div className="size-16 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center border border-rose-500/30">
@@ -77,7 +96,7 @@ export function PermissionGuard({
           <p className="text-slate-400 text-sm max-w-md mx-auto">
             Your role (<span className="text-emerald-400 font-semibold">{user.role_name || user.role_code}</span>) does not have{" "}
             <span className="text-rose-400 font-semibold uppercase">{action}</span> authorization for the{" "}
-            <span className="text-amber-400 font-semibold uppercase">{module}</span> module.
+            <span className="text-amber-400 font-semibold uppercase">{displayModule}</span> module.
           </p>
         </div>
 
