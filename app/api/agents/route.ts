@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       created_by: session.userId,
     });
 
-    if (parsed.data.password) {
+    if (parsed.data.password && parsed.data.personal_info?.email) {
       const agentEmail = parsed.data.personal_info.email.toLowerCase();
       const existingUser = await User.findOne({ tenant_id: session.tenantId, email: agentEmail });
       if (existingUser) {

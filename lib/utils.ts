@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { toast as defaultToast } from "sonner"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -52,8 +53,29 @@ export function getApiErrorMessage(data: any, fallback: string = "An error occur
   return fallback;
 }
 
-export function toastApiError(toast: any, data: any, fallback: string = "An error occurred") {
+export function toastApiError(
+  first: any,
+  second?: any,
+  third: string = "An error occurred"
+) {
+  let toastObj = defaultToast;
+  let data = first;
+  let fallback = typeof second === "string" ? second : third;
+
+  if (first && typeof first.error === "function") {
+    // 3-arg format: (toast, data, fallback)
+    toastObj = first;
+    data = second;
+    fallback = third;
+  } else if (typeof second === "string") {
+    // 2-arg format: (data, fallback)
+    data = first;
+    fallback = second;
+  }
+
   const message = getApiErrorMessage(data, fallback);
-  toast.error(message);
+  if (toastObj && typeof toastObj.error === "function") {
+    toastObj.error(message);
+  }
 }
 

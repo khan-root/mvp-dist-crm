@@ -18,9 +18,11 @@ import { Download, Upload, CheckCircle2, AlertCircle, RefreshCw, FileSpreadsheet
 
 export function BulkImportDialog({
   entityType,
+  buttonText,
   onImportSuccess,
 }: {
   entityType: string;
+  buttonText?: string;
   onImportSuccess?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,14 +50,14 @@ export function BulkImportDialog({
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
       if (!text) {
-        setErrorMsg("Uploaded file is empty");
+        setErrorMsg("Selected file is empty.");
         return;
       }
 
       try {
         const rows = parseCSVText(text);
         if (rows.length === 0) {
-          setErrorMsg("No data rows found in CSV file.");
+          setErrorMsg("No valid data rows found in CSV.");
         } else {
           setParsedRows(rows);
         }
@@ -132,7 +134,7 @@ export function BulkImportDialog({
     >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5 text-xs font-semibold">
-          <Upload className="size-3.5" /> Bulk Import
+          <Upload className="size-3.5" /> {buttonText || "Bulk Import"}
         </Button>
       </DialogTrigger>
 
